@@ -1,0 +1,3 @@
+# Copiar este archivo a local.properties y ajustar la ruta al SDK de Android.
+# Este archivo NO se debe commitear (está en .gitignore).
+sdk.dir=/Users/<tu-usuario>/Library/Android/sdk

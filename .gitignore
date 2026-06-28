@@ -2,25 +2,38 @@
 .DS_Store
 .AppleDouble
 .LSOverride
+._*
+.Spotlight-V100
+.Trashes
 
 # Android
+*.apk
+*.aab
+*.ap_
 android/.gradle/
 android/local.properties
 android/build/
 android/app/build/
 android/*.iml
+android/*.keystore
+android/*.jks
+android/.navigation/
+android/captures/
 
 # .NET
-backend/bin/
-backend/obj/
-backend/*.user
-backend/appsettings.Development.json
+**/bin/
+**/obj/
+*.user
+.vs/
+*.suo
+*.swp
+
+# appsettings con secretos (Development sí se commitea con valores de ejemplo)
+backend/**/appsettings.Production.json
 
 # IDE
 .idea/
 .vscode/
-*.suo
-*.user
 
 # Environment
 .env

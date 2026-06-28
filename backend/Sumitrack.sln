@@ -1,0 +1,28 @@
+
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sumitrack.Api", "src/Sumitrack.Api/Sumitrack.Api.csproj", "{920AF722-AF0B-4D25-B4F4-06F88E109B2E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sumitrack.Api.Tests", "tests/Sumitrack.Api.Tests/Sumitrack.Api.Tests.csproj", "{DA0D2073-4427-4749-823D-2A19FF6B0256}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{920AF722-AF0B-4D25-B4F4-06F88E109B2E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{920AF722-AF0B-4D25-B4F4-06F88E109B2E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{920AF722-AF0B-4D25-B4F4-06F88E109B2E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{920AF722-AF0B-4D25-B4F4-06F88E109B2E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DA0D2073-4427-4749-823D-2A19FF6B0256}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DA0D2073-4427-4749-823D-2A19FF6B0256}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DA0D2073-4427-4749-823D-2A19FF6B0256}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DA0D2073-4427-4749-823D-2A19FF6B0256}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

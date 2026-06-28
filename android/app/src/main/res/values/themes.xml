@@ -1,0 +1,4 @@
+<resources>
+    <!-- Tema base — tokens visuales se aplican en Historia 1.3 (Color.kt, Type.kt, Shape.kt) -->
+    <style name="Theme.Sumitrack" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>
