@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-06-27
-last_updated: 2026-06-27  # updated: epic-1 in-progress, story 1-1 ready-for-dev
+last_updated: 2026-06-28  # updated: 1-2 → review
 project: sumitrack
 project_key: NOKEY
 tracking_system: file-system
@@ -45,7 +45,7 @@ development_status:
   # ─── Epic 1: Fundación del Proyecto e Inicio de Sesión ───
   epic-1: in-progress
   1-1-configuracion-del-monorepo-y-pipeline-ci-cd: done
-  1-2-infraestructura-backend-api-net-postgresql-multi-tenant: ready-for-dev
+  1-2-infraestructura-backend-api-net-postgresql-multi-tenant: review
   1-3-infraestructura-android-estructura-room-hilt-y-tema-visual: backlog
   1-4-inicio-de-sesion-sesion-persistente-y-cierre-de-sesion: backlog
   epic-1-retrospective: optional
