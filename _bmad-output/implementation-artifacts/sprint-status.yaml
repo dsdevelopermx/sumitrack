@@ -1,0 +1,85 @@
+# generated: 2026-06-27
+# last_updated: 2026-06-27
+# project: sumitrack
+# project_key: NOKEY
+# tracking_system: file-system
+# story_location: _bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - Developer typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+
+generated: 2026-06-27
+last_updated: 2026-06-27
+project: sumitrack
+project_key: NOKEY
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+
+development_status:
+  # ─── Epic 1: Fundación del Proyecto e Inicio de Sesión ───
+  epic-1: backlog
+  1-1-configuracion-del-monorepo-y-pipeline-ci-cd: backlog
+  1-2-infraestructura-backend-api-net-postgresql-multi-tenant: backlog
+  1-3-infraestructura-android-estructura-room-hilt-y-tema-visual: backlog
+  1-4-inicio-de-sesion-sesion-persistente-y-cierre-de-sesion: backlog
+  epic-1-retrospective: optional
+
+  # ─── Epic 2: Gestión de Clientes y Catálogo de Productos ───
+  epic-2: backlog
+  2-1-lista-y-busqueda-de-clientes: backlog
+  2-2-alta-y-edicion-de-cliente: backlog
+  2-3-perfil-de-cliente-con-saldo-y-ordenes-abiertas: backlog
+  2-4-catalogo-de-productos-y-variantes: backlog
+  epic-2-retrospective: optional
+
+  # ─── Epic 3: Registro de Ventas, Cobros y Ticket ───
+  epic-3: backlog
+  3-1-historial-de-ordenes: backlog
+  3-2-seleccion-de-cliente-e-items-en-nueva-orden: backlog
+  3-3-resumen-de-orden-y-configuracion-de-pago: backlog
+  3-4-generacion-y-distribucion-del-ticket: backlog
+  3-5-detalle-de-orden-e-historial-de-cobros: backlog
+  3-6-registro-de-cobros-sobre-ventas-y-parcialidades: backlog
+  3-7-credito-a-favor-y-cancelacion-de-venta-con-cobros: backlog
+  epic-3-retrospective: optional
+
+  # ─── Epic 4: Sincronización Offline y Resolución de Conflictos ───
+  epic-4: backlog
+  4-1-motor-de-sincronizacion-push-en-background: backlog
+  4-2-pull-inicial-y-folio-del-servidor-al-hacer-login: backlog
+  4-3-indicadores-de-sincronizacion-en-la-ui: backlog
+  4-4-deteccion-y-resolucion-de-conflictos: backlog
+  epic-4-retrospective: optional
+
+  # ─── Epic 5: Agenda de Cobros, Notificaciones y Configuración ───
+  epic-5: backlog
+  5-1-pantalla-de-configuracion-del-tenant: backlog
+  5-2-notificaciones-push-locales-para-recordatorios-de-cobro: backlog
+  5-3-agenda-y-calendario-de-cobros: backlog
+  epic-5-retrospective: optional
