@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=390px, initial-scale=1">
+<title>Sumitrack — S-07 Pantalla de Pago</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #DDDDE8;
+    font-family: 'Roboto', 'Segoe UI', system-ui, sans-serif;
+    display: flex;
+    gap: 32px;
+    padding: 32px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    min-height: 100vh;
+  }
+
+  /* ── Phone shell ── */
+  .phone {
+    width: 390px;
+    background: #F0F0F5;
+    border-radius: 44px;
+    overflow: hidden;
+    box-shadow: 0 12px 48px rgba(0,0,0,0.22);
+    border: 9px solid #1A1A2E;
+    flex-shrink: 0;
+  }
+
+  /* ── Status bar ── */
+  .status-bar {
+    background: #1A237E;
+    padding: 10px 20px 6px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .status-bar span { color: #fff; font-size: 11px; font-weight: 600; }
+
+  /* ── App bar ── */
+  .app-bar {
+    background: #1A237E;
+    padding: 8px 16px 12px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .back-btn {
+    width: 38px; height: 38px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%; color: #fff; font-size: 20px;
+    border: none; background: rgba(255,255,255,0.1); cursor: pointer;
+  }
+  .app-bar-title { color: #fff; font-size: 22px; font-weight: 700; letter-spacing: -0.3px; }
+
+  /* ── Order total header ── */
+  .order-total-bar {
+    background: #283593;
+    padding: 12px 16px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .total-label { color: rgba(255,255,255,0.75); font-size: 13px; font-weight: 400; }
+  .total-amount { color: #fff; font-size: 22px; font-weight: 700; letter-spacing: -0.3px; }
+  .total-client { color: rgba(255,255,255,0.65); font-size: 12px; margin-top: 2px; }
+
+  /* ── Mode tabs ── */
+  .mode-tabs {
+    background: #fff;
+    display: flex;
+    border-bottom: 1px solid #E8E8EE;
+  }
+  .mode-tab {
+    flex: 1; padding: 14px 8px;
+    text-align: center;
+    font-size: 13px; font-weight: 700;
+    cursor: pointer; border: none; background: transparent;
+    letter-spacing: 0.3px;
+  }
+  .mode-tab.active {
+    color: #3949AB;
+    border-bottom: 3px solid #3949AB;
+  }
+  .mode-tab.inactive { color: #6B6B80; border-bottom: 3px solid transparent; }
+
+  /* ── Scroll content ── */
+  .scroll-content {
+    background: #F0F0F5;
+    padding: 16px;
+  }
+
+  /* ── Section card ── */
+  .section-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 3px rgba(26,35,126,0.08);
+  }
+  .section-label {
+    font-size: 12px; font-weight: 700;
+    color: #6B6B80; text-transform: uppercase;
+    letter-spacing: 0.7px; margin-bottom: 12px;
+  }
+
+  /* ── Input field ── */
+  .input-row {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 12px;
+  }
+  .input-label { font-size: 14px; color: #1A1A2E; font-weight: 400; flex: 1; }
+  .input-field {
+    background: #F0F0F5;
+    border: 1.5px solid #E8E8EE;
+    border-radius: 10px;
+    padding: 9px 14px;
+    font-size: 15px; font-weight: 700;
+    color: #1A237E; width: 80px;
+    text-align: center;
+  }
+
+  /* ── Periodicity chips ── */
+  .period-row {
+    display: flex; gap: 8px; margin-bottom: 4px;
+  }
+  .period-chip {
+    flex: 1; padding: 9px 4px;
+    border-radius: 20px;
+    font-size: 12px; font-weight: 700;
+    text-align: center; cursor: pointer; border: none;
+    letter-spacing: 0.2px;
+  }
+  .period-active {
+    background: #3949AB; color: #fff;
+  }
+  .period-inactive {
+    background: #F0F0F5; color: #6B6B80;
+    border: 1.5px solid #E8E8EE;
+  }
+
+  /* ── Installment rows ── */
+  .installment-row {
+    display: flex; align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid #F0F0F5;
+  }
+  .installment-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .inst-num {
+    width: 28px; height: 28px;
+    background: #EDE7F6; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; color: #4527A0;
+    flex-shrink: 0; margin-right: 12px;
+  }
+  .inst-details { flex: 1; }
+  .inst-date { font-size: 13px; font-weight: 600; color: #1A1A2E; }
+  .inst-sublabel { font-size: 12px; color: #6B6B80; margin-top: 2px; }
+  .inst-amount {
+    font-size: 16px; font-weight: 700;
+    color: #1A237E; letter-spacing: -0.2px;
+  }
+  .inst-edit {
+    width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%; background: #F0F0F5;
+    color: #6B6B80; font-size: 14px;
+    cursor: pointer; border: none; margin-left: 8px;
+  }
+
+  /* ── Total check ── */
+  .total-check {
+    background: rgba(46,125,50,0.08);
+    border-radius: 12px;
+    padding: 12px 14px;
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 4px;
+  }
+  .check-label { font-size: 13px; color: #2E7D32; font-weight: 700; }
+  .check-amount { font-size: 15px; color: #2E7D32; font-weight: 700; }
+  .check-icon { color: #2E7D32; font-size: 16px; margin-right: 6px; }
+
+  /* ── Confirm button ── */
+  .confirm-wrap {
+    background: #fff;
+    padding: 14px 16px 10px;
+    border-top: 1px solid #E8E8EE;
+  }
+  .btn-confirm {
+    width: 100%;
+    background: #3949AB; color: #fff;
+    border: none; border-radius: 12px;
+    padding: 16px;
+    font-size: 15px; font-weight: 700;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    box-shadow: 0 3px 10px rgba(57,73,171,0.32);
+  }
+  .btn-confirm.disabled {
+    background: #E0E0E0; color: #9E9E9E;
+    box-shadow: none; cursor: not-allowed;
+  }
+
+  /* ── Bottom nav ── */
+  .bottom-nav {
+    background: #FFFFFF;
+    border-top: 1px solid #E8E8EE;
+    display: flex; padding: 8px 0 14px;
+  }
+  .nav-item {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; gap: 4px; padding: 6px 0; cursor: pointer;
+  }
+  .nav-pill {
+    width: 48px; height: 32px; border-radius: 16px;
+    display: flex; align-items: center; justify-content: center; margin-bottom: 2px;
+  }
+  .nav-item.active .nav-pill { background: rgba(57,73,171,0.14); }
+  .nav-icon { font-size: 22px; line-height: 1; color: #6B6B80; }
+  .nav-item.active .nav-icon { color: #3949AB; }
+  .nav-label { font-size: 11px; font-weight: 600; color: #6B6B80; }
+  .nav-item.active .nav-label { color: #3949AB; }
+
+  /* ── Phone 2 — Pago inmediato ── */
+  .payment-method-row {
+    display: flex; align-items: center;
+    gap: 8px; margin-bottom: 10px;
+  }
+  .method-dropdown {
+    background: #F0F0F5;
+    border: 1.5px solid #E8E8EE;
+    border-radius: 10px;
+    padding: 10px 10px;
+    font-size: 13px; color: #1A1A2E;
+    min-width: 120px; font-weight: 400;
+  }
+  .method-amount {
+    flex: 1;
+    background: #F0F0F5;
+    border: 1.5px solid #E8E8EE;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 14px; font-weight: 700;
+    color: #1A237E; text-align: right;
+  }
+  .method-del {
+    width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%; background: #FCE4EC;
+    color: #AD1457; font-size: 16px;
+    border: none; cursor: pointer; flex-shrink: 0;
+  }
+  .add-method-btn {
+    width: 100%; padding: 10px;
+    background: transparent; border: none;
+    color: #3949AB; font-size: 14px; font-weight: 700;
+    cursor: pointer; text-align: left; margin-top: 4px;
+  }
+  .restante-row {
+    background: rgba(245,127,23,0.09);
+    border-radius: 12px;
+    padding: 12px 14px;
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 8px;
+  }
+  .restante-label { font-size: 13px; color: #F57F17; font-weight: 700; }
+  .restante-amount { font-size: 17px; color: #F57F17; font-weight: 700; }
+  .restante-ok { background: rgba(46,125,50,0.08); }
+  .restante-ok .restante-label { color: #2E7D32; }
+  .restante-ok .restante-amount { color: #2E7D32; }
+
+  /* ── Credit chip ── */
+  .credit-chip {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(0,188,212,0.1);
+    border-radius: 12px; padding: 10px 14px;
+    margin-bottom: 12px;
+  }
+  .credit-icon { font-size: 18px; }
+  .credit-text { font-size: 13px; color: #00838F; font-weight: 600; flex: 1; }
+  .credit-apply {
+    font-size: 12px; font-weight: 700;
+    color: #3949AB; background: transparent;
+    border: none; cursor: pointer;
+  }
+
+  /* ── Annotations ── */
+  .annotations {
+    width: 320px;
+    display: flex; flex-direction: column; gap: 16px;
+  }
+  .anno-card {
+    background: #fff; border-radius: 16px;
+    padding: 18px 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+  }
+  .anno-card h3 {
+    font-size: 13px; font-weight: 700;
+    color: #1A237E; text-transform: uppercase;
+    letter-spacing: 0.8px; margin-bottom: 10px;
+  }
+  .anno-card p { font-size: 13px; color: #444; line-height: 1.6; margin-bottom: 6px; }
+  .anno-card p:last-child { margin-bottom: 0; }
+  .tag {
+    display: inline-block;
+    background: #EDE7F6; color: #4527A0;
+    font-size: 11px; font-weight: 700;
+    padding: 2px 8px; border-radius: 8px; margin-right: 4px;
+  }
+  .rule { border-top: 1px solid #E8E8EE; margin: 8px 0; }
+
+  h1.section-title {
+    width: 100%;
+    font-size: 24px; font-weight: 700;
+    color: #1A237E; margin-bottom: 4px;
+  }
+  p.section-sub {
+    width: 100%;
+    font-size: 13px; color: #666;
+    margin-bottom: 24px; line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+
+<h1 class="section-title">S-07 — Pantalla de Pago</h1>
+<p class="section-sub">Acceso desde S-06 › Botón "Ir a Pagar" · Dos modos: Pago inmediato y Parcialidades</p>
+
+<!-- ══ PHONE 1 — Modo Parcialidades ══ -->
+<div class="phone">
+  <div class="status-bar">
+    <span>9:41</span>
+    <span>●●● 100%</span>
+  </div>
+
+  <!-- App bar con back -->
+  <div class="app-bar">
+    <button class="back-btn">←</button>
+    <span class="app-bar-title">Pago</span>
+  </div>
+
+  <!-- Total siempre visible -->
+  <div class="order-total-bar">
+    <div>
+      <div class="total-label">Total de la orden</div>
+      <div class="total-client">Abarrotes La Paz</div>
+    </div>
+    <div class="total-amount">$7,000.00</div>
+  </div>
+
+  <!-- Mode selector tabs -->
+  <div class="mode-tabs">
+    <button class="mode-tab inactive">Pago inmediato</button>
+    <button class="mode-tab active">Parcialidades</button>
+  </div>
+
+  <!-- Parcialidades form -->
+  <div class="scroll-content">
+
+    <!-- Configuración -->
+    <div class="section-card">
+      <div class="section-label">Configuración</div>
+
+      <!-- Número de parcialidades -->
+      <div class="input-row">
+        <span class="input-label">Número de parcialidades</span>
+        <input class="input-field" value="3" type="number" min="2" />
+      </div>
+
+      <!-- Periodicidad -->
+      <div class="section-label" style="margin-top: 4px;">Periodicidad</div>
+      <div class="period-row">
+        <button class="period-chip period-inactive">Semanal</button>
+        <button class="period-chip period-inactive">Quincenal</button>
+        <button class="period-chip period-active">Mensual</button>
+      </div>
+    </div>
+
+    <!-- Parcialidades calculadas -->
+    <div class="section-card">
+      <div class="section-label">Parcialidades — ajusta si es necesario</div>
+
+      <!-- Parcialidad 1 (ajustada por Roberto) -->
+      <div class="installment-row">
+        <div class="inst-num">1</div>
+        <div class="inst-details">
+          <div class="inst-date">Vie 27 jun 2026</div>
+          <div class="inst-sublabel">Hoy · Ajustada</div>
+        </div>
+        <span class="inst-amount">$2,500.00</span>
+        <button class="inst-edit" title="Editar fecha o monto">✎</button>
+      </div>
+
+      <!-- Parcialidad 2 -->
+      <div class="installment-row">
+        <div class="inst-num">2</div>
+        <div class="inst-details">
+          <div class="inst-date">Vie 25 jul 2026</div>
+          <div class="inst-sublabel">En 28 días</div>
+        </div>
+        <span class="inst-amount">$2,250.00</span>
+        <button class="inst-edit">✎</button>
+      </div>
+
+      <!-- Parcialidad 3 -->
+      <div class="installment-row">
+        <div class="inst-num">3</div>
+        <div class="inst-details">
+          <div class="inst-date">Vie 22 ago 2026</div>
+          <div class="inst-sublabel">En 56 días</div>
+        </div>
+        <span class="inst-amount">$2,250.00</span>
+        <button class="inst-edit">✎</button>
+      </div>
+
+      <!-- Total check — suma coincide ✓ -->
+      <div class="total-check">
+        <div style="display:flex; align-items:center;">
+          <span class="check-icon">✓</span>
+          <span class="check-label">Suma correcta</span>
+        </div>
+        <span class="check-amount">$7,000.00</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Confirm button — habilitado (suma correcta) -->
+  <div class="confirm-wrap">
+    <button class="btn-confirm">Confirmar Pago con Parcialidades</button>
+  </div>
+
+  <div class="bottom-nav">
+    <div class="nav-item active">
+      <div class="nav-pill"><span class="nav-icon">📋</span></div>
+      <span class="nav-label">Órdenes</span>
+    </div>
+    <div class="nav-item">
+      <div class="nav-pill"><span class="nav-icon">👤</span></div>
+      <span class="nav-label">Clientes</span>
+    </div>
+    <div class="nav-item">
+      <div class="nav-pill"><span class="nav-icon">⚙️</span></div>
+      <span class="nav-label">Config</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PHONE 2 — Modo Pago Inmediato (con Crédito a Favor) ══ -->
+<div class="phone">
+  <div class="status-bar">
+    <span>9:41</span>
+    <span>●●● 100%</span>
+  </div>
+  <div class="app-bar">
+    <button class="back-btn">←</button>
+    <span class="app-bar-title">Pago</span>
+  </div>
+  <div class="order-total-bar">
+    <div>
+      <div class="total-label">Total de la orden</div>
+      <div class="total-client">Llantera El Turbo</div>
+    </div>
+    <div class="total-amount">$2,400.00</div>
+  </div>
+  <div class="mode-tabs">
+    <button class="mode-tab active">Pago inmediato</button>
+    <button class="mode-tab inactive">Parcialidades</button>
+  </div>
+
+  <div class="scroll-content">
+    <!-- Crédito a favor chip informativo -->
+    <div class="section-card" style="padding: 12px 14px;">
+      <div class="credit-chip">
+        <span class="credit-icon">💰</span>
+        <span class="credit-text">Tiene <strong>$800.00</strong> a su favor. Puedes aplicarlo al pago.</span>
+        <button class="credit-apply">Aplicar</button>
+      </div>
+    </div>
+
+    <!-- Constructor de métodos de pago -->
+    <div class="section-card">
+      <div class="section-label">Métodos de pago</div>
+
+      <!-- Fila 1 — Efectivo -->
+      <div class="payment-method-row">
+        <select class="method-dropdown">
+          <option>Efectivo</option>
+        </select>
+        <input class="method-amount" value="$1,600.00" />
+        <button class="method-del" title="Eliminar método de pago Efectivo (contentDescription)">×</button>
+      </div>
+
+      <!-- Fila 2 — Transferencia -->
+      <div class="payment-method-row">
+        <select class="method-dropdown">
+          <option>Transferencia</option>
+        </select>
+        <input class="method-amount" value="$800.00" />
+        <button class="method-del" title="Eliminar método de pago Transferencia">×</button>
+      </div>
+
+      <button class="add-method-btn">+ Agregar método</button>
+
+      <!-- Restante — en cero → habilitado -->
+      <div class="restante-row restante-ok">
+        <span class="restante-label">✓ Restante por asignar</span>
+        <span class="restante-amount">$0.00</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm habilitado -->
+  <div class="confirm-wrap">
+    <button class="btn-confirm">Confirmar Pago</button>
+  </div>
+
+  <div class="bottom-nav">
+    <div class="nav-item active">
+      <div class="nav-pill"><span class="nav-icon">📋</span></div>
+      <span class="nav-label">Órdenes</span>
+    </div>
+    <div class="nav-item">
+      <div class="nav-pill"><span class="nav-icon">👤</span></div>
+      <span class="nav-label">Clientes</span>
+    </div>
+    <div class="nav-item">
+      <div class="nav-pill"><span class="nav-icon">⚙️</span></div>
+      <span class="nav-label">Config</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PHONE 3 — Pago inmediato con Restante > $0 (botón deshabilitado) ══ -->
+<div class="phone">
+  <div class="status-bar">
+    <span>9:41</span>
+    <span>●●● 100%</span>
+  </div>
+  <div class="app-bar">
+    <button class="back-btn">←</button>
+    <span class="app-bar-title">Pago</span>
+  </div>
+  <div class="order-total-bar">
+    <div>
+      <div class="total-label">Total de la orden</div>
+      <div class="total-client">Ferretería El Clavo</div>
+    </div>
+    <div class="total-amount">$4,200.00</div>
+  </div>
+  <div class="mode-tabs">
+    <button class="mode-tab active">Pago inmediato</button>
+    <button class="mode-tab inactive">Parcialidades</button>
+  </div>
+
+  <div class="scroll-content">
+    <div class="section-card">
+      <div class="section-label">Métodos de pago</div>
+
+      <div class="payment-method-row">
+        <select class="method-dropdown">
+          <option>Efectivo</option>
+        </select>
+        <input class="method-amount" value="$2,000.00" />
+        <button class="method-del">×</button>
+      </div>
+
+      <button class="add-method-btn">+ Agregar método</button>
+
+      <!-- Restante > $0 → ámbar, botón deshabilitado -->
+      <div class="restante-row">
+        <span class="restante-label">Restante por asignar</span>
+        <span class="restante-amount">$2,200.00</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm deshabilitado -->
+  <div class="confirm-wrap">
+    <button class="btn-confirm disabled" disabled>Confirmar Pago</button>
+  </div>
+
+  <div class="bottom-nav">
+    <div class="nav-item active">
+      <div class="nav-pill"><span class="nav-icon">📋</span></div>
+      <span class="nav-label">Órdenes</span>
+    </div>
+    <div class="nav-item">
+      <div class="nav-pill"><span class="nav-icon">👤</span></div>
+      <span class="nav-label">Clientes</span>
+    </div>
+    <div class="nav-item">
+      <div class="nav-pill"><span class="nav-icon">⚙️</span></div>
+      <span class="nav-label">Config</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Annotations ══ -->
+<div class="annotations">
+  <div class="anno-card">
+    <h3>Total siempre visible</h3>
+    <p>El total de la orden permanece fijo en el header durante toda la pantalla S-07 — el usuario nunca pierde de vista cuánto debe cubrir sin importar cuánto haga scroll.</p>
+    <p>El nombre del cliente también está en el header para confirmar el contexto sin ambigüedad.</p>
+  </div>
+
+  <div class="anno-card">
+    <h3>Modo Parcialidades</h3>
+    <p><span class="tag">Pantalla 1</span> 3 parcialidades mensuales. Roberto ajustó la fecha de la 1.ª manualmente.</p>
+    <p>El sistema calcula montos equitativos (<code>total / n</code>). Si el usuario edita un monto, el sistema redistribuye el delta en las parcialidades restantes.</p>
+    <div class="rule"></div>
+    <p>La suma de parcialidades <strong>debe igualar el total</strong> para habilitar "Confirmar Pago". El check verde confirma que cuadra.</p>
+    <p>Si no cuadra: indicador rojo con el delta faltante y botón deshabilitado.</p>
+  </div>
+
+  <div class="anno-card">
+    <h3>Constructor de Métodos de Pago</h3>
+    <p>Layout por fila: <code>dropdown [minWidth=120dp]</code> · <code>campo monto [weight=1f]</code> · <code>botón × [wrapContent]</code>. Esta distribución soporta <code>fontScale</code> elevado sin colapsar los controles.</p>
+    <div class="rule"></div>
+    <p>El botón × lleva <code>contentDescription</code>: "Eliminar método de pago [tipo]" — p.ej. "Eliminar método de pago Efectivo".</p>
+    <p>"Efectivo" no puede repetirse. Si ya existe una fila de Efectivo, el dropdown lo oculta de las opciones de filas adicionales.</p>
+  </div>
+
+  <div class="anno-card">
+    <h3>Restante por asignar (LiveRegion)</h3>
+    <p>El contador usa <code>LiveRegionMode.Polite</code>: TalkBack lo anuncia automáticamente cuando cambia, sin que el usuario mueva el foco.</p>
+    <div class="rule"></div>
+    <p><span class="tag">Ámbar</span> Restante > $0.00 — botón "Confirmar" deshabilitado.</p>
+    <p><span class="tag">Verde</span> Restante = $0.00 — botón "Confirmar" habilitado.</p>
+  </div>
+
+  <div class="anno-card">
+    <h3>Crédito a Favor</h3>
+    <p>Si el cliente tiene Crédito a Favor, aparece el chip informativo (color cian tonal) con el monto y el botón "Aplicar". Al aplicarlo, se agrega como método de pago automáticamente y el Restante se actualiza.</p>
+    <p>El cian está en el chip solo como fondo tonal — no como texto ni ícono de sync, respetando la reserva exclusiva del token <code>sync-ok</code>.</p>
+  </div>
+
+  <div class="anno-card">
+    <h3>Estados mostrados</h3>
+    <p><span class="tag">Pantalla 1</span> Modo Parcialidades — 3 cuotas mensuales, suma correcta, botón habilitado</p>
+    <p><span class="tag">Pantalla 2</span> Modo Pago inmediato — con Crédito a Favor, Restante $0, botón habilitado</p>
+    <p><span class="tag">Pantalla 3</span> Modo Pago inmediato — Restante > $0, botón deshabilitado</p>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=390px, initial-scale=1">
+<title>Sumitrack — Dirección B: Verde Campo</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #ECEDE8; font-family: 'Segoe UI', system-ui, sans-serif; display: flex; gap: 24px; padding: 24px; align-items: flex-start; flex-wrap: wrap; }
+
+  .phone { width: 390px; background: #FAFAF7; border-radius: 40px; overflow: hidden; box-shadow: 0 8px 40px rgba(0,0,0,0.18); border: 8px solid #1B2720; }
+  .status-bar { background: #1B5E20; padding: 10px 20px 6px; display: flex; justify-content: space-between; align-items: center; }
+  .status-bar span { color: #fff; font-size: 11px; font-weight: 600; }
+
+  .app-bar { background: #1B5E20; padding: 12px 16px 16px; }
+  .app-bar-title { color: #FFFFFF; font-size: 22px; font-weight: 700; letter-spacing: -0.3px; }
+  .app-bar-sub { color: rgba(255,255,255,0.65); font-size: 12px; margin-top: 2px; }
+
+  .search-bar { background: #2E7D32; padding: 10px 16px; display: flex; gap: 8px; align-items: center; }
+  .search-field { flex: 1; background: rgba(255,255,255,0.18); border: none; border-radius: 8px; padding: 8px 12px; color: #fff; font-size: 14px; }
+  .search-field::placeholder { color: rgba(255,255,255,0.55); }
+  .filter-btn { background: rgba(255,255,255,0.18); border: none; border-radius: 8px; padding: 8px 10px; color: #fff; font-size: 14px; cursor: pointer; }
+
+  .content { padding: 12px; background: #F1F2ED; min-height: 500px; }
+
+  .card { background: #FAFAF7; border-radius: 14px; padding: 14px 16px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(27,94,32,0.10); border-left: 3px solid transparent; }
+  .card.has-debt { border-left-color: #BF360C; }
+  .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+  .folio { font-size: 13px; font-weight: 700; color: #2E7D32; }
+  .date { font-size: 11px; color: #888; }
+  .client-name { font-size: 15px; font-weight: 600; color: #1B2720; margin-bottom: 6px; }
+  .card-footer { display: flex; justify-content: space-between; align-items: center; }
+  .amount { font-size: 17px; font-weight: 700; color: #1B5E20; }
+  .status-badges { display: flex; gap: 6px; align-items: center; }
+
+  .badge { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 20px; letter-spacing: 0.3px; }
+  .badge-paid { background: #E8F5E9; color: #2E7D32; }
+  .badge-pending { background: #FFF3E0; color: #E65100; }
+  .badge-debt { background: #FBE9E7; color: #BF360C; }
+
+  .sync-ok { color: #388E3C; font-size: 15px; }
+  .sync-pending { color: #FB8C00; font-size: 15px; }
+
+  .fab-container { padding: 12px 16px; background: #F1F2ED; display: flex; justify-content: flex-end; }
+  .fab { background: #558B2F; color: #fff; border: none; border-radius: 16px; padding: 14px 20px; font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(85,139,47,0.4); cursor: pointer; }
+
+  .bottom-nav { background: #FAFAF7; border-top: 1px solid #DDE0D8; display: flex; padding: 8px 0 12px; }
+  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 0; cursor: pointer; }
+  .nav-icon { font-size: 22px; }
+  .nav-label { font-size: 10px; font-weight: 600; color: #888; }
+  .nav-item.active .nav-label { color: #2E7D32; }
+  .nav-dot { width: 4px; height: 4px; background: #2E7D32; border-radius: 50%; }
+
+  .palette { background: #fff; border-radius: 16px; padding: 20px; min-width: 260px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
+  .palette h3 { font-size: 16px; font-weight: 700; color: #1B2720; margin-bottom: 4px; }
+  .palette p { font-size: 12px; color: #666; margin-bottom: 16px; line-height: 1.5; }
+  .swatch-row { display: flex; gap: 8px; margin-bottom: 12px; align-items: center; }
+  .swatch { width: 36px; height: 36px; border-radius: 8px; flex-shrink: 0; }
+  .swatch-info { font-size: 12px; }
+  .swatch-name { font-weight: 700; color: #333; }
+  .swatch-hex { color: #888; font-family: monospace; }
+  .tone-label { font-size: 11px; font-weight: 700; color: #999; text-transform: uppercase; letter-spacing: 1px; margin: 12px 0 8px; }
+</style>
+</head>
+<body>
+
+<div class="phone">
+  <div class="status-bar">
+    <span>9:41</span>
+    <span>●●● 100%</span>
+  </div>
+
+  <div class="app-bar">
+    <div class="app-bar-title">Sumitrack</div>
+    <div class="app-bar-sub">Historial de Órdenes</div>
+  </div>
+
+  <div class="search-bar">
+    <input class="search-field" placeholder="🔍  Folio, cliente o fecha..." />
+    <button class="filter-btn">⊟</button>
+  </div>
+
+  <div class="content">
+
+    <div class="card">
+      <div class="card-header">
+        <span class="folio">#ORD-00312</span>
+        <span class="date">Hoy, 10:25 a.m.</span>
+      </div>
+      <div class="client-name">Ferretería El Clavo</div>
+      <div class="card-footer">
+        <span class="amount">$4,800.00</span>
+        <div class="status-badges">
+          <span class="badge badge-paid">Pagada</span>
+          <span class="sync-ok">☁</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="folio">#ORD-00311</span>
+        <span class="date">Hoy, 8:03 a.m.</span>
+      </div>
+      <div class="client-name">Abarrotes La Paz</div>
+      <div class="card-footer">
+        <span class="amount">$12,350.00</span>
+        <div class="status-badges">
+          <span class="badge badge-pending">Parcialidades</span>
+          <span class="sync-pending">⚠</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card has-debt">
+      <div class="card-header">
+        <span class="folio">#ORD-00309</span>
+        <span class="date">Ayer, 4:15 p.m.</span>
+      </div>
+      <div class="client-name">Papelería Cervantes</div>
+      <div class="card-footer">
+        <span class="amount">$2,200.00</span>
+        <div class="status-badges">
+          <span class="badge badge-debt">Atraso</span>
+          <span class="sync-ok">☁</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="folio">#ORD-00308</span>
+        <span class="date">Ayer, 1:30 p.m.</span>
+      </div>
+      <div class="client-name">Tienda El Surtido</div>
+      <div class="card-footer">
+        <span class="amount">$6,750.00</span>
+        <div class="status-badges">
+          <span class="badge badge-paid">Pagada</span>
+          <span class="sync-ok">☁</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="fab-container">
+    <button class="fab">＋ Nueva Orden</button>
+  </div>
+
+  <div class="bottom-nav">
+    <div class="nav-item active">
+      <span class="nav-icon">📋</span>
+      <div class="nav-dot"></div>
+      <span class="nav-label" style="color:#2E7D32">Órdenes</span>
+    </div>
+    <div class="nav-item">
+      <span class="nav-icon">👥</span>
+      <span class="nav-label">Clientes</span>
+    </div>
+    <div class="nav-item">
+      <span class="nav-icon">⚙️</span>
+      <span class="nav-label">Config</span>
+    </div>
+  </div>
+</div>
+
+<div class="palette">
+  <h3>B — Verde Campo</h3>
+  <p>Sensación de trabajo de campo, cercanía y confianza. Verde profundo con superficies cálidas y acentos tierra. Adecuado para distribuidores y vendedores de ruta.</p>
+
+  <div class="tone-label">Primarios</div>
+  <div class="swatch-row">
+    <div class="swatch" style="background:#1B5E20"></div>
+    <div class="swatch-info"><div class="swatch-name">Verde oscuro</div><div class="swatch-hex">#1B5E20</div></div>
+  </div>
+  <div class="swatch-row">
+    <div class="swatch" style="background:#2E7D32"></div>
+    <div class="swatch-info"><div class="swatch-name">Verde medio</div><div class="swatch-hex">#2E7D32</div></div>
+  </div>
+
+  <div class="tone-label">Acción</div>
+  <div class="swatch-row">
+    <div class="swatch" style="background:#558B2F"></div>
+    <div class="swatch-info"><div class="swatch-name">Verde lima CTA</div><div class="swatch-hex">#558B2F</div></div>
+  </div>
+
+  <div class="tone-label">Superficies</div>
+  <div class="swatch-row">
+    <div class="swatch" style="background:#FAFAF7; border:1px solid #DDE0D8"></div>
+    <div class="swatch-info"><div class="swatch-name">Blanco cálido</div><div class="swatch-hex">#FAFAF7</div></div>
+  </div>
+  <div class="swatch-row">
+    <div class="swatch" style="background:#F1F2ED"></div>
+    <div class="swatch-info"><div class="swatch-name">Fondo neutro</div><div class="swatch-hex">#F1F2ED</div></div>
+  </div>
+
+  <div class="tone-label">Estados</div>
+  <div class="swatch-row">
+    <div class="swatch" style="background:#388E3C"></div>
+    <div class="swatch-info"><div class="swatch-name">Éxito / Pagado</div><div class="swatch-hex">#388E3C</div></div>
+  </div>
+  <div class="swatch-row">
+    <div class="swatch" style="background:#FB8C00"></div>
+    <div class="swatch-info"><div class="swatch-name">Pendiente</div><div class="swatch-hex">#FB8C00</div></div>
+  </div>
+  <div class="swatch-row">
+    <div class="swatch" style="background:#BF360C"></div>
+    <div class="swatch-info"><div class="swatch-name">Atraso / Error</div><div class="swatch-hex">#BF360C</div></div>
+  </div>
+</div>
+
+</body>
+</html>

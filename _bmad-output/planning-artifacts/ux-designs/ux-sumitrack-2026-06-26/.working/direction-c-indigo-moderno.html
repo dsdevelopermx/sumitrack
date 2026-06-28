@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=390px, initial-scale=1">
+<title>Sumitrack — Dirección C: Índigo Moderno</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #EBEBF0; font-family: 'Segoe UI', system-ui, sans-serif; display: flex; gap: 24px; padding: 24px; align-items: flex-start; flex-wrap: wrap; }
+
+  .phone { width: 390px; background: #FAFAFA; border-radius: 40px; overflow: hidden; box-shadow: 0 8px 40px rgba(0,0,0,0.18); border: 8px solid #1A1A2E; }
+  .status-bar { background: #1A237E; padding: 10px 20px 6px; display: flex; justify-content: space-between; align-items: center; }
+  .status-bar span { color: #fff; font-size: 11px; font-weight: 600; }
+
+  .app-bar { background: #1A237E; padding: 12px 16px 16px; }
+  .app-bar-title { color: #FFFFFF; font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+  .app-bar-sub { color: rgba(255,255,255,0.6); font-size: 12px; margin-top: 2px; }
+
+  .search-bar { background: #283593; padding: 10px 16px; display: flex; gap: 8px; align-items: center; }
+  .search-field { flex: 1; background: rgba(255,255,255,0.15); border: none; border-radius: 10px; padding: 8px 12px; color: #fff; font-size: 14px; }
+  .search-field::placeholder { color: rgba(255,255,255,0.5); }
+  .filter-btn { background: rgba(255,255,255,0.15); border: none; border-radius: 10px; padding: 8px 10px; color: #fff; font-size: 14px; cursor: pointer; }
+
+  .content { padding: 12px; background: #F0F0F5; min-height: 500px; }
+
+  .card { background: #FFFFFF; border-radius: 16px; padding: 14px 16px; margin-bottom: 10px; box-shadow: 0 2px 8px rgba(26,35,126,0.08); }
+  .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+  .folio { font-size: 12px; font-weight: 800; color: #3949AB; letter-spacing: 0.5px; }
+  .date { font-size: 11px; color: #9E9E9E; }
+  .client-name { font-size: 15px; font-weight: 600; color: #1A1A2E; margin-bottom: 8px; }
+  .card-footer { display: flex; justify-content: space-between; align-items: center; }
+  .amount { font-size: 18px; font-weight: 800; color: #1A237E; letter-spacing: -0.5px; }
+  .status-badges { display: flex; gap: 6px; align-items: center; }
+
+  .badge { font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 20px; letter-spacing: 0.3px; }
+  .badge-paid { background: #E8F5E9; color: #2E7D32; }
+  .badge-pending { background: #FFF8E1; color: #F57F17; }
+  .badge-debt { background: #FCE4EC; color: #AD1457; }
+
+  .sync-ok { color: #00BCD4; font-size: 15px; }
+  .sync-pending { color: #FF7043; font-size: 15px; }
+
+  .fab-container { padding: 12px 16px; background: #F0F0F5; display: flex; justify-content: flex-end; }
+  .fab { background: linear-gradient(135deg, #3949AB 0%, #1A237E 100%); color: #fff; border: none; border-radius: 16px; padding: 14px 22px; font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 16px rgba(26,35,126,0.35); cursor: pointer; }
+
+  .bottom-nav { background: #fff; border-top: 1px solid #E8E8EE; display: flex; padding: 8px 0 12px; }
+  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 0; cursor: pointer; }
+  .nav-icon { font-size: 22px; }
+  .nav-label { font-size: 10px; font-weight: 600; color: #9E9E9E; }
+  .nav-item.active .nav-label { color: #3949AB; }
+  .nav-dot { width: 4px; height: 4px; background: #3949AB; border-radius: 50%; }
+
+  .palette { background: #fff; border-radius: 16px; padding: 20px; min-width: 260px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
+  .palette h3 { font-size: 16px; font-weight: 700; color: #1A1A2E; margin-bottom: 4px; }
+  .palette p { font-size: 12px; color: #666; margin-bottom: 16px; line-height: 1.5; }
+  .swatch-row { display: flex; gap: 8px; margin-bottom: 12px; align-items: center; }
+  .swatch { width: 36px; height: 36px; border-radius: 8px; flex-shrink: 0; }
+  .swatch-info { font-size: 12px; }
+  .swatch-name { font-weight: 700; color: #333; }
+  .swatch-hex { color: #888; font-family: monospace; }
+  .tone-label { font-size: 11px; font-weight: 700; color: #999; text-transform: uppercase; letter-spacing: 1px; margin: 12px 0 8px; }
+</style>
+</head>
+<body>
+
+<div class="phone">
+  <div class="status-bar">
+    <span>9:41</span>
+    <span>●●● 100%</span>
+  </div>
+
+  <div class="app-bar">
+    <div class="app-bar-title">Sumitrack</div>
+    <div class="app-bar-sub">Historial de Órdenes</div>
+  </div>
+
+  <div class="search-bar">
+    <input class="search-field" placeholder="🔍  Folio, cliente o fecha..." />
+    <button class="filter-btn">⊟</button>
+  </div>
+
+  <div class="content">
+
+    <div class="card">
+      <div class="card-header">
+        <span class="folio">ORD-00312</span>
+        <span class="date">Hoy, 10:25 a.m.</span>
+      </div>
+      <div class="client-name">Ferretería El Clavo</div>
+      <div class="card-footer">
+        <span class="amount">$4,800.00</span>
+        <div class="status-badges">
+          <span class="badge badge-paid">Pagada</span>
+          <span class="sync-ok">☁</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="folio">ORD-00311</span>
+        <span class="date">Hoy, 8:03 a.m.</span>
+      </div>
+      <div class="client-name">Abarrotes La Paz</div>
+      <div class="card-footer">
+        <span class="amount">$12,350.00</span>
+        <div class="status-badges">
+          <span class="badge badge-pending">Parcialidades</span>
+          <span class="sync-pending">⚠</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="folio">ORD-00309</span>
+        <span class="date">Ayer, 4:15 p.m.</span>
+      </div>
+      <div class="client-name">Papelería Cervantes</div>
+      <div class="card-footer">
+        <span class="amount">$2,200.00</span>
+        <div class="status-badges">
+          <span class="badge badge-debt">Atraso</span>
+          <span class="sync-ok">☁</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="folio">ORD-00308</span>
+        <span class="date">Ayer, 1:30 p.m.</span>
+      </div>
+      <div class="client-name">Tienda El Surtido</div>
+      <div class="card-footer">
+        <span class="amount">$6,750.00</span>
+        <div class="status-badges">
+          <span class="badge badge-paid">Pagada</span>
+          <span class="sync-ok">☁</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="fab-container">
+    <button class="fab">＋ Nueva Orden</button>
+  </div>
+
+  <div class="bottom-nav">
+    <div class="nav-item active">
+      <span class="nav-icon">📋</span>
+      <div class="nav-dot"></div>
+      <span class="nav-label" style="color:#3949AB">Órdenes</span>
+    </div>
+    <div class="nav-item">
+      <span class="nav-icon">👥</span>
+      <span class="nav-label">Clientes</span>
+    </div>
+    <div class="nav-item">
+      <span class="nav-icon">⚙️</span>
+      <span class="nav-label">Config</span>
+    </div>
+  </div>
+</div>
+
+<div class="palette">
+  <h3>C — Índigo Moderno</h3>
+  <p>Sofisticado y tech. Índigo profundo con acento cian. Se siente premium y contemporáneo — ideal si la marca quiere proyectar tecnología y modernidad.</p>
+
+  <div class="tone-label">Primarios</div>
+  <div class="swatch-row">
+    <div class="swatch" style="background:#1A237E"></div>
+    <div class="swatch-info"><div class="swatch-name">Índigo oscuro</div><div class="swatch-hex">#1A237E</div></div>
+  </div>
+  <div class="swatch-row">
+    <div class="swatch" style="background:#3949AB"></div>
+    <div class="swatch-info"><div class="swatch-name">Índigo medio</div><div class="swatch-hex">#3949AB</div></div>
+  </div>
+
+  <div class="tone-label">Acento</div>
+  <div class="swatch-row">
+    <div class="swatch" style="background:#00BCD4"></div>
+    <div class="swatch-info"><div class="swatch-name">Cian (sync/ok)</div><div class="swatch-hex">#00BCD4</div></div>
+  </div>
+
+  <div class="tone-label">Superficies</div>
+  <div class="swatch-row">
+    <div class="swatch" style="background:#FFFFFF; border:1px solid #E0E0E0"></div>
+    <div class="swatch-info"><div class="swatch-name">Blanco puro</div><div class="swatch-hex">#FFFFFF</div></div>
+  </div>
+  <div class="swatch-row">
+    <div class="swatch" style="background:#F0F0F5"></div>
+    <div class="swatch-info"><div class="swatch-name">Fondo frío</div><div class="swatch-hex">#F0F0F5</div></div>
+  </div>
+
+  <div class="tone-label">Estados</div>
+  <div class="swatch-row">
+    <div class="swatch" style="background:#2E7D32"></div>
+    <div class="swatch-info"><div class="swatch-name">Éxito / Pagado</div><div class="swatch-hex">#2E7D32</div></div>
+  </div>
+  <div class="swatch-row">
+    <div class="swatch" style="background:#F57F17"></div>
+    <div class="swatch-info"><div class="swatch-name">Pendiente</div><div class="swatch-hex">#F57F17</div></div>
+  </div>
+  <div class="swatch-row">
+    <div class="swatch" style="background:#AD1457"></div>
+    <div class="swatch-info"><div class="swatch-name">Atraso / Error</div><div class="swatch-hex">#AD1457</div></div>
+  </div>
+</div>
+
+</body>
+</html>

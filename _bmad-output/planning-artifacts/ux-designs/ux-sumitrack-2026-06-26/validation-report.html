@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>UX Design Validation: Sumitrack</title>
+<style>
+  :root {
+    --bg: #fafaf9;
+    --surface: #ffffff;
+    --border: #e7e5e4;
+    --text: #1c1917;
+    --muted: #78716c;
+    --verdict-strong: #16a34a;
+    --verdict-adequate: #65a30d;
+    --verdict-thin: #d97706;
+    --verdict-broken: #dc2626;
+    --sev-low: #64748b;
+    --sev-medium: #ca8a04;
+    --sev-high: #ea580c;
+    --sev-critical: #dc2626;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; font-size: 15px; }
+  .container { max-width: 960px; margin: 0 auto; padding: 32px 24px 64px; }
+  header.report-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+  .title h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  .title .subtitle { color: var(--muted); font-size: 13px; margin-top: 4px; font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+  .counts { display: flex; gap: 12px; flex-shrink: 0; align-items: flex-start; flex-wrap: wrap; }
+  .count-pill { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 6px; }
+  .count-critical { background: rgba(220,38,38,0.12); color: var(--sev-critical); }
+  .count-high { background: rgba(234,88,12,0.12); color: var(--sev-high); }
+  .count-medium { background: rgba(202,138,4,0.12); color: var(--sev-medium); }
+  .count-low { background: rgba(100,116,139,0.12); color: var(--sev-low); }
+  .synthesis { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--muted); border-radius: 8px; padding: 18px 22px; margin-bottom: 24px; font-size: 15.5px; }
+  .synthesis p { margin: 0 0 10px; }
+  .synthesis p:last-child { margin-bottom: 0; }
+  .dimension-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 24px; }
+  .dim-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+  .dim-card .dim-name { font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  .dim-card .dim-verdict { font-size: 14px; font-weight: 600; }
+  section.dimension, section.reviewer-section { margin-bottom: 14px; }
+  section.dimension details, section.reviewer-section details { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  section summary { padding: 14px 20px; cursor: pointer; user-select: none; list-style: none; display: flex; align-items: center; gap: 12px; }
+  section summary::-webkit-details-marker { display: none; }
+  section summary::before { content: "▸"; display: inline-block; color: var(--muted); transition: transform 0.15s ease; }
+  section details[open] summary::before { transform: rotate(90deg); }
+  section summary h2 { display: inline; margin: 0; font-size: 16px; font-weight: 600; letter-spacing: -0.005em; flex: 1; }
+  .verdict-pill { font-size: 11px; padding: 3px 10px; border-radius: 999px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: white; }
+  .verdict-strong { background: var(--verdict-strong); }
+  .verdict-adequate { background: var(--verdict-adequate); }
+  .verdict-thin { background: var(--verdict-thin); }
+  .verdict-broken { background: var(--verdict-broken); }
+  .dim-body { padding: 4px 20px 18px; }
+  .dim-judgment { color: var(--text); font-size: 14.5px; }
+  .dim-judgment p { margin: 0 0 10px; }
+  .findings-list { padding: 0 20px 4px; }
+  article.finding { padding: 14px 0; border-top: 1px solid var(--border); }
+  article.finding:first-child { border-top: none; }
+  article.finding header { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+  .badge { font-size: 10.5px; padding: 3px 8px; border-radius: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; line-height: 1.4; }
+  .badge-sev-low { background: rgba(100,116,139,0.12); color: var(--sev-low); }
+  .badge-sev-medium { background: rgba(202,138,4,0.14); color: var(--sev-medium); }
+  .badge-sev-high { background: rgba(234,88,12,0.14); color: var(--sev-high); }
+  .badge-sev-critical { background: rgba(220,38,38,0.14); color: var(--sev-critical); }
+  .finding-title { margin: 0; font-size: 15px; font-weight: 500; flex: 1; min-width: 200px; }
+  .finding-location { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12.5px; color: var(--muted); }
+  .finding-note, .finding-fix { margin-top: 6px; font-size: 14px; }
+  .finding-fix strong { color: var(--muted); font-weight: 500; }
+  .reviewer-source { font-size: 12px; color: var(--muted); font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+  .what-works { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 14px 18px; margin: 0 20px 18px; font-size: 14px; }
+  .what-works h4 { margin: 0 0 8px; font-size: 13px; font-weight: 600; color: #15803d; text-transform: uppercase; letter-spacing: 0.04em; }
+  .what-works ul { margin: 0; padding-left: 18px; }
+  .what-works li { margin-bottom: 4px; }
+  .mechanical { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; margin-top: 24px; font-size: 14px; }
+  .mechanical h3 { margin: 0 0 10px; font-size: 14px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .mechanical ul { margin: 0; padding-left: 20px; }
+  .mechanical li { margin-bottom: 6px; }
+  footer.report-footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--border); font-size: 12px; color: var(--muted); font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+  footer .meta { display: flex; gap: 24px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header class="report-header">
+    <div class="title">
+      <h1>Sumitrack — Reporte de Validación UX</h1>
+      <div class="subtitle">_bmad-output/planning-artifacts/ux-designs/ux-sumitrack-2026-06-26/</div>
+    </div>
+    <div class="counts">
+      <span class="count-pill count-critical">2 Critical</span>
+      <span class="count-pill count-high">9 High</span>
+      <span class="count-pill count-medium">17 Medium</span>
+      <span class="count-pill count-low">9 Low</span>
+    </div>
+  </header>
+
+  <div class="synthesis">
+    <p>El par de documentos es <strong>adecuado y listo para consumo downstream</strong> con un conjunto acotado de correcciones. La arquitectura de información es excepcionalmente detallada (15 superficies, 3 flujos con protagonista), la estructura canónica se respeta en ambos documentos, y el sistema de tokens es coherente en un 90%. Los tres flujos clave tienen protagonista nombrado, pasos numerados y beat de clímax — un contrato sólido para arquitectura y desarrollo.</p>
+    <p>Los <strong>dos defectos críticos</strong> deben resolverse antes de que arquitectura consuma los documentos: el token duplicado <code>colors.secondary = colors.sync-ok</code> introduce ambigüedad directa para desarrolladores, y el Stepper de Cantidad especificado en 40dp contradice el mínimo de 48dp declarado en la propia Accessibility Floor. Ambas correcciones son quirúrgicas. Los findings de alta severidad principales son la ausencia total de referencias visuales inline y tres nombres de componente que no coinciden entre spines — bloqueadores menores que impiden el cruce mecánico de documentos pero no impiden la comprensión.</p>
+  </div>
+
+  <!-- DIMENSION SUMMARY CARDS -->
+  <div class="dimension-summary">
+    <div class="dim-card"><div class="dim-name">Flow coverage</div><div class="dim-verdict" style="color: var(--verdict-adequate)">adequate</div></div>
+    <div class="dim-card"><div class="dim-name">Token completeness</div><div class="dim-verdict" style="color: var(--verdict-broken)">broken</div></div>
+    <div class="dim-card"><div class="dim-name">Component coverage</div><div class="dim-verdict" style="color: var(--verdict-thin)">thin</div></div>
+    <div class="dim-card"><div class="dim-name">State coverage</div><div class="dim-verdict" style="color: var(--verdict-adequate)">adequate</div></div>
+    <div class="dim-card"><div class="dim-name">Visual references</div><div class="dim-verdict" style="color: var(--verdict-broken)">broken</div></div>
+    <div class="dim-card"><div class="dim-name">Bloat</div><div class="dim-verdict" style="color: var(--verdict-adequate)">adequate</div></div>
+    <div class="dim-card"><div class="dim-name">Inheritance</div><div class="dim-verdict" style="color: var(--verdict-adequate)">adequate</div></div>
+    <div class="dim-card"><div class="dim-name">Shape fit</div><div class="dim-verdict" style="color: var(--verdict-strong)">strong</div></div>
+  </div>
+
+  <!-- 1. FLOW COVERAGE -->
+  <section class="dimension">
+    <details>
+      <summary>
+        <h2>1. Flow Coverage</h2>
+        <span class="verdict-pill verdict-adequate">adequate</span>
+      </summary>
+      <div class="dim-body">
+        <div class="dim-judgment">
+          <p>Los tres flujos clave tienen protagonista nombrado (Roberto), pasos numerados, beat de clímax y narración de resolución. Los flujos 2 y 3 carecen de camino de falla explícito — omisión menor para v1. S-10 (Agenda) aparece en la IA con [ASSUMPTION] pero no tiene flujo propio ni contrato de experiencia.</p>
+        </div>
+      </div>
+      <div class="findings-list">
+        <article class="finding">
+          <header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">Flujo 2 sin camino de falla</h3><span class="finding-location">EXPERIENCE.md § Key Flows › Flujo 2</span></header>
+          <div class="finding-note">¿Qué ocurre si el cobro registrado no cuadra al sincronizar, o si el detalle de la orden está stale al abrirse?</div>
+          <div class="finding-fix"><strong>Fix:</strong> Agregar sección "Falla": error de sync durante registro del cobro → snackbar + dato conservado local.</div>
+        </article>
+        <article class="finding">
+          <header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">Flujo 3 sin camino de abandono</h3><span class="finding-location">EXPERIENCE.md § Key Flows › Flujo 3</span></header>
+          <div class="finding-note">¿Qué pasa si el usuario cierra el dialog de conflicto sin resolver?</div>
+          <div class="finding-fix"><strong>Fix:</strong> Añadir: "Si cierra sin elegir, el conflicto permanece en cola y se reofrece en el próximo sync."</div>
+        </article>
+        <article class="finding">
+          <header><span class="badge badge-sev-low">low</span><h3 class="finding-title">S-10 sin flujo propio</h3><span class="finding-location">EXPERIENCE.md § IA › S-10</span></header>
+          <div class="finding-note">La Agenda de Cobros está descrita en IA pero sin flujo de Key Flow. Un consumidor que implemente S-10 no tiene contrato de experiencia.</div>
+          <div class="finding-fix"><strong>Fix:</strong> Añadir Flujo 4 breve "Roberto consulta cobros del día" o marcar S-10 como fuera de alcance en v1.</div>
+        </article>
+      </div>
+    </details>
+  </section>
+
+  <!-- 2. TOKEN COMPLETENESS -->
+  <section class="dimension">
+    <details open>
+      <summary>
+        <h2>2. Token Completeness</h2>
+        <span class="verdict-pill verdict-broken">broken</span>
+      </summary>
+      <div class="dim-body">
+        <div class="dim-judgment">
+          <p>42 tokens definidos; todas las referencias <code>{path.to.token}</code> en prosa resuelven correctamente. Un defecto crítico: <code>colors.secondary</code> y <code>colors.sync-ok</code> son el mismo valor hexadecimal (#00BCD4) con la misma intención semántica, introduciendo ambigüedad directa para desarrollo. Cinco tokens huérfanos sin referencia en prosa. Sin declaración explícita de pares de contraste WCAG.</p>
+        </div>
+      </div>
+      <div class="findings-list">
+        <article class="finding">
+          <header><span class="badge badge-sev-critical">critical</span><h3 class="finding-title">Token duplicado: <code>colors.secondary = colors.sync-ok = #00BCD4</code></h3><span class="finding-location">DESIGN.md frontmatter § Colors</span></header>
+          <div class="finding-note">Un desarrollador que encuentre ambos tokens no sabe cuál aplicar. EXPERIENCE.md ya usa <code>{colors.sync-ok}</code> consistentemente.</div>
+          <div class="finding-fix"><strong>Fix:</strong> Eliminar <code>colors.secondary</code> del frontmatter y de la tabla de paleta. Hacer <code>colors.sync-ok</code> el único token autorizado para el cian.</div>
+        </article>
+        <article class="finding">
+          <header><span class="badge badge-sev-high">high</span><h3 class="finding-title"><code>typography.display-large</code> huérfano</h3><span class="finding-location">DESIGN.md frontmatter § Typography</span></header>
+          <div class="finding-note">Definido en YAML (28sp/700) pero sin fila en la tabla de roles tipográficos ni referencia en prosa.</div>
+          <div class="finding-fix"><strong>Fix:</strong> Añadir fila con su rol (ej. título de empty state) o eliminar del frontmatter.</div>
+        </article>
+        <article class="finding">
+          <header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">4 tokens huérfanos</h3><span class="finding-location">DESIGN.md frontmatter</span></header>
+          <div class="finding-note"><code>colors.on-secondary</code>, <code>colors.on-error</code>, <code>spacing.screen-vertical-top</code>, <code>spacing.icon-text-gap</code> — definidos, nunca referenciados.</div>
+          <div class="finding-fix"><strong>Fix:</strong> Documentar su uso en las secciones correspondientes o eliminarlos.</div>
+        </article>
+        <article class="finding">
+          <header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">Sin declaración de pares de contraste</h3><span class="finding-location">DESIGN.md § Colors</span></header>
+          <div class="finding-note">La afirmación de WCAG AA está solo en EXPERIENCE.md. Un arquitecto downstream no puede verificar sin recalcular.</div>
+          <div class="finding-fix"><strong>Fix:</strong> Añadir sub-sección "Contraste" en Colors con pares críticos: <code>on-surface/surface</code>, <code>on-primary/primary</code>, <code>status-overdue/fondo tonal</code>, <code>sync-ok/surface</code>.</div>
+        </article>
+      </div>
+    </details>
+  </section>
+
+  <!-- 3. COMPONENT COVERAGE -->
+  <section class="dimension">
+    <details open>
+      <summary>
+        <h2>3. Component Coverage</h2>
+        <span class="verdict-pill verdict-thin">thin</span>
+      </summary>
+      <div class="dim-body">
+        <div class="dim-judgment">
+          <p>DESIGN.md declara 8 componentes; EXPERIENCE.md declara 6. Hay brechas: el Stepper de Cantidad tiene spec conductual completa pero ninguna spec visual. Tres pares de nombres no coinciden entre spines, bloqueando el cruce mecánico de documentos.</p>
+        </div>
+      </div>
+      <div class="findings-list">
+        <article class="finding">
+          <header><span class="badge badge-sev-high">high</span><h3 class="finding-title">Stepper sin spec visual en DESIGN.md</h3><span class="finding-location">DESIGN.md § Components — ausente</span></header>
+          <div class="finding-note">Spec conductual completa en EXPERIENCE.md (40dp, sin campo editable) pero ninguna entrada visual en DESIGN.</div>
+          <div class="finding-fix"><strong>Fix:</strong> Añadir entrada en DESIGN.md § Components: botones circulares 48dp táctil / 40dp visual con <code>{colors.primary-variant}</code>, valor en <code>{typography.body-large}</code>.</div>
+        </article>
+        <article class="finding">
+          <header><span class="badge badge-sev-high">high</span><h3 class="finding-title">3 nombres de componente no coinciden entre spines</h3><span class="finding-location">DESIGN.md § Components vs EXPERIENCE.md § Component Patterns</span></header>
+          <div class="finding-note">DESIGN: "Indicadores de Sincronización" / EXPERIENCE: "Ícono de Sincronización". DESIGN: "Bottom Sheet de Variante" / EXPERIENCE: "Selector de Variante". DESIGN: "Fila de Método de Pago" / EXPERIENCE: "Constructor de Métodos de Pago".</div>
+          <div class="finding-fix"><strong>Fix:</strong> Unificar en ambos documentos: "Ícono de Sincronización", "Selector de Variante (Bottom Sheet)", "Constructor de Métodos de Pago".</div>
+        </article>
+        <article class="finding">
+          <header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">Barra de Navegación Inferior sin spec conductual</h3><span class="finding-location">EXPERIENCE.md § Component Patterns — ausente</span></header>
+          <div class="finding-note">Tiene spec visual en DESIGN pero no tiene reglas de comportamiento: ¿tab activo tocado de nuevo hace scroll-to-top?</div>
+          <div class="finding-fix"><strong>Fix:</strong> Añadir entrada mínima: "Tab activo tocado → scroll al tope de lista. Sin re-animación de selección."</div>
+        </article>
+        <article class="finding">
+          <header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">FAB — comportamiento en empty state no en Component Patterns</h3><span class="finding-location">EXPERIENCE.md § Component Patterns — ausente</span></header>
+          <div class="finding-note">El comportamiento especial en empty state (DESIGN.md lo menciona) no está en Component Patterns de EXPERIENCE.</div>
+          <div class="finding-fix"><strong>Fix:</strong> Añadir: "En empty state de S-02, el FAB coexiste con el CTA del empty state — no se oculta."</div>
+        </article>
+      </div>
+    </details>
+  </section>
+
+  <!-- 4. STATE COVERAGE -->
+  <section class="dimension">
+    <details>
+      <summary>
+        <h2>4. State Coverage</h2>
+        <span class="verdict-pill verdict-adequate">adequate</span>
+      </summary>
+      <div class="dim-body">
+        <div class="dim-judgment">
+          <p>Cobertura global sólida via secciones genéricas (conectividad, skeleton, error de sistema). Gaps en S-10 (sin ningún estado documentado), S-04 (catálogo vacío) y S-13 (validación de formulario).</p>
+        </div>
+      </div>
+      <div class="findings-list">
+        <article class="finding">
+          <header><span class="badge badge-sev-high">high</span><h3 class="finding-title">S-10 Agenda sin ningún estado documentado</h3><span class="finding-location">EXPERIENCE.md § State Patterns — ausente para S-10</span></header>
+          <div class="finding-note">Sin internet, sin cobros programados (empty state), carga fría — ninguno cubierto.</div>
+          <div class="finding-fix"><strong>Fix:</strong> Añadir empty state ("No hay cobros programados. Crea una orden con parcialidades para verlos aquí.") y estado offline (usa datos locales sin banner adicional).</div>
+        </article>
+        <article class="finding">
+          <header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">S-04 sin empty state de catálogo vacío</h3><span class="finding-location">EXPERIENCE.md § State Patterns — ausente para S-04</span></header>
+          <div class="finding-note">¿Qué ve Roberto si el catálogo tiene cero productos activos?</div>
+          <div class="finding-fix"><strong>Fix:</strong> Añadir empty state: "Aún no hay productos en el catálogo. Agrégalos en Configuración." + botón "Ir a Configuración".</div>
+        </article>
+        <article class="finding">
+          <header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">S-13 sin estados de validación de formulario</h3><span class="finding-location">EXPERIENCE.md § State Patterns — ausente para S-13</span></header>
+          <div class="finding-fix"><strong>Fix:</strong> Añadir: "Campos obligatorios vacíos → botón 'Guardar' deshabilitado. Mensajes de error al primer intento de guardar."</div>
+        </article>
+        <article class="finding">
+          <header><span class="badge badge-sev-low">low</span><h3 class="finding-title">S-08 Ticket sin estado de error de impresora en State Patterns</h3><span class="finding-location">EXPERIENCE.md § State Patterns — ausente para S-08</span></header>
+          <div class="finding-note">La microcopia existe en Voice and Tone pero no hay entrada en State Patterns.</div>
+          <div class="finding-fix"><strong>Fix:</strong> Añadir: "Error de impresora → Snackbar; bottom sheet permanece abierto para retry o compartir."</div>
+        </article>
+      </div>
+    </details>
+  </section>
+
+  <!-- 5. VISUAL REFERENCE COVERAGE -->
+  <section class="dimension">
+    <details open>
+      <summary>
+        <h2>5. Visual Reference Coverage</h2>
+        <span class="verdict-pill verdict-broken">broken</span>
+      </summary>
+      <div class="dim-body">
+        <div class="dim-judgment">
+          <p>Existen tres HTML de exploración visual en <code>.working/</code> pero ninguno está referenciado inline en los spines. <code>direction-c-indigo-moderno.html</code> (la dirección elegida) está huérfano. No existen carpetas <code>mockups/</code> ni <code>wireframes/</code>.</p>
+        </div>
+      </div>
+      <div class="findings-list">
+        <article class="finding">
+          <header><span class="badge badge-sev-high">high</span><h3 class="finding-title">Cero referencias inline a visuales en los spines</h3><span class="finding-location">DESIGN.md § Brand & Style — ausente</span></header>
+          <div class="finding-note">Un desarrollador downstream no sabe que existe una referencia visual. La dirección elegida está desconectada del contrato.</div>
+          <div class="finding-fix"><strong>Fix:</strong> Añadir en DESIGN.md § Brand & Style: "→ Referencia visual: <code>.working/direction-c-indigo-moderno.html</code>. Los spines ganan en conflicto."</div>
+        </article>
+        <article class="finding">
+          <header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">Sin mockups de pantallas complejas</h3><span class="finding-location">workspace — carpetas mockups/ y wireframes/ ausentes</span></header>
+          <div class="finding-note">S-02, S-07 y S-10 son las superficies de mayor complejidad de layout. Sin referencia visual, arquitectura y desarrollo las deben interpretar solo desde texto.</div>
+          <div class="finding-fix"><strong>Fix:</strong> Crear <code>mockups/</code> con al menos <code>order-list.html</code> y <code>payment.html</code>; referenciarlos inline en la IA de EXPERIENCE.md.</div>
+        </article>
+      </div>
+    </details>
+  </section>
+
+  <!-- 6. BLOAT -->
+  <section class="dimension">
+    <details>
+      <summary>
+        <h2>6. Bloat &amp; Overspecification</h2>
+        <span class="verdict-pill verdict-adequate">adequate</span>
+      </summary>
+      <div class="dim-body">
+        <div class="dim-judgment"><p>La prosa es concisa. Las tablas reemplazan párrafos donde corresponde. Dos instancias de detalle de implementación que pertenecen a la capa de código, no de UX.</p></div>
+      </div>
+      <div class="findings-list">
+        <article class="finding">
+          <header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title"><code>HapticFeedbackConstants.VIRTUAL_KEY</code> es constante de SDK</h3><span class="finding-location">EXPERIENCE.md § Interaction Primitives</span></header>
+          <div class="finding-fix"><strong>Fix:</strong> Reemplazar por "respuesta háptica leve en confirmaciones."</div>
+        </article>
+        <article class="finding">
+          <header><span class="badge badge-sev-low">low</span><h3 class="finding-title"><code>wrapContentHeight</code> es atributo de layout Compose/XML</h3><span class="finding-location">EXPERIENCE.md § Accessibility Floor</span></header>
+          <div class="finding-fix"><strong>Fix:</strong> Reemplazar por "los layouts se adaptan a la altura del texto sin truncar."</div>
+        </article>
+        <article class="finding">
+          <header><span class="badge badge-sev-low">low</span><h3 class="finding-title">Gradiente del FAB mencionado sin especificar</h3><span class="finding-location">DESIGN.md § Elevation &amp; Depth</span></header>
+          <div class="finding-fix"><strong>Fix:</strong> Especificar dirección y colores, o simplificar a "FAB en <code>{colors.primary-variant}</code> sólido, sin gradiente."</div>
+        </article>
+      </div>
+    </details>
+  </section>
+
+  <!-- 7. INHERITANCE DISCIPLINE -->
+  <section class="dimension">
+    <details>
+      <summary>
+        <h2>7. Inheritance Discipline</h2>
+        <span class="verdict-pill verdict-adequate">adequate</span>
+      </summary>
+      <div class="dim-body">
+        <div class="dim-judgment"><p>Terminología consistente a lo largo de ambos documentos. Los nombres del decision log se trasladan fielmente. Los 3 nombres de componente no alineados ya documentados en §3 son el único gap.</p></div>
+      </div>
+      <div class="findings-list">
+        <article class="finding">
+          <header><span class="badge badge-sev-high">high</span><h3 class="finding-title">3 nombres de componente no alineados entre spines</h3><span class="finding-location">DESIGN.md § Components vs EXPERIENCE.md § Component Patterns</span></header>
+          <div class="finding-note">Duplicado de §3 — misma corrección aplica.</div>
+          <div class="finding-fix"><strong>Fix:</strong> Ver §3 Component Coverage.</div>
+        </article>
+        <article class="finding">
+          <header><span class="badge badge-sev-low">low</span><h3 class="finding-title">Ícono sync "outline" no especificado en DESIGN.md</h3><span class="finding-location">DESIGN.md § Indicadores de Sincronización</span></header>
+          <div class="finding-note">Decision log dice "nube vacía"; EXPERIENCE dice "sin relleno (outline)". DESIGN debería especificar "nube en outline" para que sea accionable para un diseñador de recursos.</div>
+          <div class="finding-fix"><strong>Fix:</strong> Añadir en DESIGN: "Nube pendiente: variante outline (sin relleno), trazo de 2dp."</div>
+        </article>
+      </div>
+    </details>
+  </section>
+
+  <!-- 8. SHAPE FIT -->
+  <section class="dimension">
+    <details>
+      <summary>
+        <h2>8. Shape Fit</h2>
+        <span class="verdict-pill verdict-strong">strong</span>
+      </summary>
+      <div class="dim-body">
+        <div class="dim-judgment"><p>DESIGN.md en orden canónico completo. EXPERIENCE.md con todas las secciones requeridas presentes. Solo falta la sección opcional "Inspiration &amp; Anti-patterns".</p></div>
+      </div>
+      <div class="findings-list">
+        <article class="finding">
+          <header><span class="badge badge-sev-low">low</span><h3 class="finding-title">Sección "Inspiration &amp; Anti-patterns" ausente</h3><span class="finding-location">EXPERIENCE.md — ausente</span></header>
+          <div class="finding-note">Presente en ambos ejemplos de referencia; útil para comunicar decisiones explícitamente rechazadas (swipe-to-delete, drag-and-drop, etc.).</div>
+          <div class="finding-fix"><strong>Fix:</strong> Añadir sección con 3 entradas mínimas: lo rechazado (swipe-to-action en listas, notificaciones push al cliente final), la razón del rechazo.</div>
+        </article>
+      </div>
+    </details>
+  </section>
+
+  <!-- ACCESSIBILITY REVIEWER -->
+  <section class="reviewer-section">
+    <details open>
+      <summary>
+        <h2>Revisión de Accesibilidad</h2>
+        <span class="reviewer-source">review-accessibility.md</span>
+      </summary>
+      <div class="dim-body">
+        <div class="dim-judgment">
+          <p>El piso declarado es correcto en intención: sync icons con doble canal, badges con texto+color, respeto a fontScale, dialogs descriptivos. Sin embargo, hay una contradicción crítica directa (stepper 40dp vs. mínimo 48dp declarado), y flujos clave — especialmente S-07 Pago y S-10 Agenda — tienen gaps que bloquearían a usuarios con TalkBack activo o fontScale elevado.</p>
+        </div>
+      </div>
+      <div class="findings-list">
+        <article class="finding">
+          <header><span class="badge badge-sev-critical">critical</span><h3 class="finding-title">Stepper especificado en 40dp — viola mínimo 48dp declarado</h3><span class="finding-location">DESIGN.md § Components › Stepper; EXPERIENCE.md § Accessibility Floor</span></header>
+          <div class="finding-note">El documento declara el mínimo de 48dp y luego especifica 40dp para el mismo componente. El stepper no tiene campo editable alternativo — el target es la única forma de interacción.</div>
+          <div class="finding-fix"><strong>Fix:</strong> El área táctil debe ser 48dp × 48dp. El círculo visual puede seguir siendo 40dp con padding interno de 4dp.</div>
+        </article>
+        <article class="finding">
+          <header><span class="badge badge-sev-high">high</span><h3 class="finding-title">S-10 Agenda: días resaltados solo por color</h3><span class="finding-location">EXPERIENCE.md § IA › S-10</span></header>
+          <div class="finding-note">Viola la regla declarada "nunca solo color". Quebraría la experiencia para usuarios con daltonismo.</div>
+          <div class="finding-fix"><strong>Fix:</strong> Añadir indicador de conteo numérico en el tile del día (ej. "3") y/o ícono de alerta para cobros próximos al umbral.</div>
+        </article>
+        <article class="finding">
+          <header><span class="badge badge-sev-high">high</span><h3 class="finding-title">LiveRegion ausente para "Restante por asignar" en S-07</h3><span class="finding-location">EXPERIENCE.md § Component Patterns › Constructor de Métodos de Pago</span></header>
+          <div class="finding-note">El valor crítico que habilita "Confirmar Pago" se actualiza en tiempo real pero un usuario de TalkBack nunca es notificado.</div>
+          <div class="finding-fix"><strong>Fix:</strong> Especificar que el Text de "Restante por asignar" usa <code>LiveRegionMode.Polite</code> para que TalkBack lo anuncie al cambiar.</div>
+        </article>
+        <article class="finding">
+          <header><span class="badge badge-sev-high">high</span><h3 class="finding-title">Fila de pago (S-07) sin estrategia de desbordamiento con fontScale elevado</h3><span class="finding-location">EXPERIENCE.md § Component Patterns › Constructor de Métodos de Pago</span></header>
+          <div class="finding-note">Tres controles en fila horizontal (dropdown + monto + ×). Con fontScale ≥ 1.5 el dropdown puede truncarse o colapsar sin estrategia definida.</div>
+          <div class="finding-fix"><strong>Fix:</strong> Especificar que dropdown tiene <code>maxLines=1, overflow=Ellipsis</code> con minWidth fijo (≥120dp), monto con <code>weight(1f)</code>, y botón × con <code>wrapContentWidth</code>.</div>
+        </article>
+        <article class="finding">
+          <header><span class="badge badge-sev-high">high</span><h3 class="finding-title">Errores de formulario sin spec de componente accesible (S-01, S-13)</h3><span class="finding-location">EXPERIENCE.md § IA › S-01, S-13</span></header>
+          <div class="finding-note">Sin especificar <code>isError</code> + <code>supportingText</code> en M3, una implementación puede usar solo borde rojo — invisible para TalkBack.</div>
+          <div class="finding-fix"><strong>Fix:</strong> Anotar que campos obligatorios usan <code>isError + supportingText</code> con mensaje descriptivo (ej. "El nombre es obligatorio").</div>
+        </article>
+        <article class="finding">
+          <header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">ContentDescription ausente — botón "×" de eliminar método de pago</h3><span class="finding-location">EXPERIENCE.md § Component Patterns › Constructor de Métodos de Pago</span></header>
+          <div class="finding-fix"><strong>Fix:</strong> Especificar <code>contentDescription</code>: "Eliminar método de pago [tipo]" incluyendo el tipo para dar contexto.</div>
+        </article>
+        <article class="finding">
+          <header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">ContentDescription ausente — ícono de calendario en app bar (S-02)</h3><span class="finding-location">EXPERIENCE.md § IA › S-02</span></header>
+          <div class="finding-fix"><strong>Fix:</strong> Especificar <code>contentDescription</code>: "Agenda de cobros".</div>
+        </article>
+        <article class="finding">
+          <header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">Chips de filtro activos diferenciados solo por color</h3><span class="finding-location">EXPERIENCE.md § Component Patterns › Chips de Filtro</span></header>
+          <div class="finding-note">Sin ícono de checkmark ni cambio de forma adicional al cambio de color de fondo.</div>
+          <div class="finding-fix"><strong>Fix:</strong> Añadir <code>leadingIcon</code> checkmark en chip activo (patrón estándar de <code>FilterChip</code> M3).</div>
+        </article>
+        <article class="finding">
+          <header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">Cards sin agrupación semántica para TalkBack</h3><span class="finding-location">DESIGN.md § Components › Card de Orden</span></header>
+          <div class="finding-note">Sin <code>mergeDescendants = true</code>, TalkBack navega elemento por elemento (folio → fecha → cliente → monto → badge → sync icon).</div>
+          <div class="finding-fix"><strong>Fix:</strong> Anotar que la card usa <code>semantics(mergeDescendants = true)</code> con string compuesto: "Orden [folio], [cliente], [monto], [estado], [sync status]".</div>
+        </article>
+        <article class="finding">
+          <header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">ImeActions no especificadas en formularios</h3><span class="finding-location">EXPERIENCE.md § Accessibility Floor</span></header>
+          <div class="finding-fix"><strong>Fix:</strong> Para S-01, S-13 y S-14: campos intermedios con <code>ImeAction.Next</code>, último campo con <code>ImeAction.Done</code>.</div>
+        </article>
+        <article class="finding">
+          <header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title"><code>label-small</code> en 10sp contradice mínimo declarado de 12sp</h3><span class="finding-location">DESIGN.md § Typography; EXPERIENCE.md § Accessibility Floor</span></header>
+          <div class="finding-fix"><strong>Fix:</strong> Elevar <code>label-small</code> a 12sp, o usar <code>label-large</code> (12sp) para chips de filtro.</div>
+        </article>
+        <article class="finding">
+          <header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">Retorno de foco tras cierre de bottom sheet no especificado</h3><span class="finding-location">EXPERIENCE.md § Component Patterns › Selector de Variante</span></header>
+          <div class="finding-fix"><strong>Fix:</strong> Anotar que al cerrar cualquier bottom sheet se restaura el foco al elemento disparador.</div>
+        </article>
+        <article class="finding">
+          <header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">Badge de deuda en S-03 posiblemente solo color</h3><span class="finding-location">EXPERIENCE.md § Key Flows › Flujo 1, paso 3</span></header>
+          <div class="finding-note">Flujo 1 menciona "badge rojo" en lista de clientes sin especificar texto o ícono adicional.</div>
+          <div class="finding-fix"><strong>Fix:</strong> Especificar que el badge de deuda muestra texto abreviado ("Vencido" o el monto) además del color.</div>
+        </article>
+        <article class="finding">
+          <header><span class="badge badge-sev-low">low</span><h3 class="finding-title">Feedback háptico no diferenciado por tipo de acción</h3><span class="finding-location">EXPERIENCE.md § Interaction Primitives</span></header>
+          <div class="finding-fix"><strong>Fix:</strong> Diferenciar: CONFIRM para pagos confirmados, REJECT para validaciones fallidas, VIRTUAL_KEY para interacciones neutras.</div>
+        </article>
+        <article class="finding">
+          <header><span class="badge badge-sev-low">low</span><h3 class="finding-title">Skeleton screens sin descripción de accesibilidad</h3><span class="finding-location">EXPERIENCE.md § State Patterns › Estado de Carga</span></header>
+          <div class="finding-fix"><strong>Fix:</strong> El contenedor de skeleton lleva <code>contentDescription: "Cargando..."</code>.</div>
+        </article>
+        <article class="finding">
+          <header><span class="badge badge-sev-low">low</span><h3 class="finding-title">Foco de TalkBack en S-15 no definido</h3><span class="finding-location">EXPERIENCE.md § IA › S-15</span></header>
+          <div class="finding-fix"><strong>Fix:</strong> Foco al título del dialog al abrirse; regresa a pantalla anterior al cerrarse.</div>
+        </article>
+        <article class="finding">
+          <header><span class="badge badge-sev-low">low</span><h3 class="finding-title">Navegación TalkBack en calendario S-10 sin semántica</h3><span class="finding-location">EXPERIENCE.md § IA › S-10</span></header>
+          <div class="finding-fix"><strong>Fix:</strong> Cada celda de día: <code>contentDescription</code> compuesta — "Lunes 29 de junio, 3 cobros pendientes".</div>
+        </article>
+      </div>
+
+      <div class="what-works">
+        <h4>Lo que está bien</h4>
+        <ul>
+          <li>Sync icons: doble canal correcto (forma diferenciada + color + contentDescription semántico).</li>
+          <li>Badges de estado: todos combinan color + texto — ningún estado comunicado solo por color.</li>
+          <li>ANIMATOR_DURATION_SCALE explícitamente referenciado con acción correcta.</li>
+          <li>Lista de ítems: 64dp de altura mínima garantiza target cómodo en el flujo de mayor tráfico.</li>
+          <li>Dialogs destructivos: labels descriptivos ("Sí, cancelar orden" / "No, mantenerla").</li>
+          <li>FAB: contentDescription "Nueva Orden" especificado. Posición en zona de pulgar correcta.</li>
+        </ul>
+      </div>
+    </details>
+  </section>
+
+  <!-- MECHANICAL NOTES -->
+  <div class="mechanical">
+    <h3>Notas mecánicas</h3>
+    <ul>
+      <li><strong>Token duplicado:</strong> <code>colors.secondary = colors.sync-ok = #00BCD4</code>. Eliminar <code>secondary</code> o redirigirlo a un color M3 distinto.</li>
+      <li><strong>3 nombres de componente desalineados</strong> entre spines (ver §3 y §7). Bloquean cruce mecánico.</li>
+      <li><strong>[ASSUMPTION] en S-10:</strong> acceso desde S-02 no validado con product owner. Debe resolverse antes de que arquitectura lo trate como contrato.</li>
+      <li><strong>Frontmatter <code>status: draft</code></strong> en ambos documentos — actualizar a <code>final</code> tras las correcciones.</li>
+      <li><strong><code>colors.sync-pending: #FF7043</code></strong> tiene contraste ~3.2:1 sobre blanco — insuficiente para texto (WCAG AA 4.5:1). Solo aceptable para ícono (umbral 3:1). No usar como color de texto de badge.</li>
+      <li><strong>S-12 "banner rojo"</strong> debería referenciar <code>{colors.status-overdue}</code> en lugar de describir el color en prosa.</li>
+    </ul>
+  </div>
+
+  <footer class="report-footer">
+    <div class="meta">
+      <span>DESIGN.md: ux-sumitrack-2026-06-26/DESIGN.md</span>
+      <span>EXPERIENCE.md: ux-sumitrack-2026-06-26/EXPERIENCE.md</span>
+      <span>Revisores: review-rubric.md · review-accessibility.md</span>
+      <span>Generado: 2026-06-26</span>
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
