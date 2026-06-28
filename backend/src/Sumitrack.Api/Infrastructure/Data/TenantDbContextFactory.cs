@@ -22,7 +22,7 @@ public class TenantDbContextFactory : ITenantDbContextFactory
         var connStr = _configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection not configured");
 
-        var tenantConnStr = connStr.TrimEnd(';') + $";Search Path=\"{schemaName}\",public";
+        var tenantConnStr = connStr.TrimEnd(';') + $";Search Path={schemaName},public";
 
         var options = new DbContextOptionsBuilder<TenantDbContext>()
             .UseNpgsql(tenantConnStr)

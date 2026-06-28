@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.IdentityModel.Tokens;
 using Sumitrack.Api.Infrastructure.Auth;
 using Sumitrack.Api.Infrastructure.Data;
@@ -20,7 +21,8 @@ public static class ServiceCollectionExtensions
         // Public DbContext (public.tenants) — EF Core migrations
         services.AddDbContext<AppDbContext>(opt =>
             opt.UseNpgsql(connStr, npgsql =>
-                npgsql.MigrationsHistoryTable("__ef_migrations_history", "public")));
+                npgsql.MigrationsHistoryTable("__ef_migrations_history", "public"))
+               .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning)));
 
         // Tenant context — uses TenantSchemaInterceptor to SET search_path per request
         services.AddScoped<ITenantContext, TenantContext>();

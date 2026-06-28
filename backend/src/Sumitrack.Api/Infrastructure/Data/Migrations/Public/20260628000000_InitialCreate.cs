@@ -1,11 +1,15 @@
 using System;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Sumitrack.Api.Infrastructure.Data;
 
 #nullable disable
 
 namespace Sumitrack.Api.Infrastructure.Data.Migrations.Public;
 
-/// <inheritdoc />
+[DbContext(typeof(AppDbContext))]
+[Migration("20260628000000_InitialCreate")]
 public partial class InitialCreate : Migration
 {
     /// <inheritdoc />
