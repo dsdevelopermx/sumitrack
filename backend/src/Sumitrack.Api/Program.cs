@@ -34,19 +34,21 @@ try
         {
             await next(context);
         }
-        catch (UnauthorizedAccessException ex)
+        catch (AuthenticationException ex)
         {
+            if (context.Response.HasStarted) throw;
             var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
-            logger.LogWarning("Unauthorized: {Code}", ex.Message);
+            logger.LogWarning(ex, "Authentication failed: {Code}", ex.Code);
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
             context.Response.ContentType = "application/json";
             await context.Response.WriteAsJsonAsync(new ErrorResponse
             {
-                Errors = [new ApiError { Code = ex.Message, Message = "No autorizado." }]
+                Errors = [new ApiError { Code = ex.Code, Message = "No autorizado." }]
             });
         }
         catch (Exception ex)
         {
+            if (context.Response.HasStarted) throw;
             var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
             logger.LogError(ex, "Unhandled exception");
             context.Response.StatusCode = StatusCodes.Status500InternalServerError;
@@ -58,12 +60,9 @@ try
         }
     });
 
-    // Scalar API docs — only in Development
-    if (app.Environment.IsDevelopment())
-    {
-        app.MapOpenApi();
-        app.MapScalarApiReference();
-    }
+    // Scalar API docs — always available (auth-protected in production via network/gateway)
+    app.MapOpenApi();
+    app.MapScalarApiReference();
 
     app.UseHttpsRedirection();
     app.UseSerilogRequestLogging();

@@ -4,7 +4,7 @@ baseline_commit: fbe63d82e0d095e235de0b13502287ca7e3fc166
 
 # Story 1.2: Infraestructura Backend — API .NET + PostgreSQL Multi-Tenant
 
-Status: review
+Status: done
 
 ## Story
 
@@ -118,6 +118,49 @@ para que todos los endpoints futuros tengan una base segura y con aislamiento de
   - [x] Test: password incorrecta → lanza UnauthorizedAccessException
   - [x] Test: usuario no existe → lanza UnauthorizedAccessException
   - [x] Test: tenant slug no encontrado → lanza UnauthorizedAccessException
+
+### Review Findings (AI)
+
+**Fecha:** 2026-06-28 | **Outcome:** Changes Requested | **Revisores:** Blind Hunter · Edge Case Hunter · Acceptance Auditor
+
+#### [Decision] (1)
+
+- [x] [Review][Decision] UnauthorizedAccessException usada para control de flujo de dominio — Cualquier componente futuro que lance `UnauthorizedAccessException` por razones no relacionadas con auth (I/O, OS, file access) será atrapado por el middleware y retornado como HTTP 401. ¿Crear tipo custom `AuthenticationException` ahora, o aceptar el patrón BCL para v1?
+
+#### [Patch][High] (5)
+
+- [x] [Review][Patch][High] Stack trace NO registrado para UnauthorizedAccessException — viola AC-4 [Program.cs:38]
+- [x] [Review][Patch][High] Scalar y MapOpenApi restringidos a Development — viola AC-3 [Program.cs:63-67]
+- [x] [Review][Patch][High] SQL injection via string.Format en EnsureTenantSchemaAsync [ApplicationBuilderExtensions.cs:57-58]
+- [x] [Review][Patch][High] SQL injection via interpolación directa en TenantSchemaInterceptor [TenantSchemaInterceptor.cs:21,31]
+- [x] [Review][Patch][High] Connection string injection en TenantDbContextFactory [TenantDbContextFactory.cs:20]
+
+#### [Patch][Med] (6)
+
+- [x] [Review][Patch][Med] ex.Message expuesto verbatim como campo code en respuesta al cliente [Program.cs:45]
+- [x] [Review][Patch][Med] Sin guarda Response.HasStarted en error middleware — escribe headers sobre respuesta iniciada [Program.cs:31-59]
+- [x] [Review][Patch][Med] App:TenantSlug mal configurado retorna silenciosamente INVALID_CREDENTIALS [AuthService.cs:31-35]
+- [x] [Review][Patch][Med] JWT signature no validada en test happy-path — ReadJwtToken sin TokenValidationParameters [AuthServiceTests.cs:116-118]
+- [x] [Review][Patch][Med] Sin MaxLength en LoginRequest.Password — BCrypt trunca en 72 bytes silenciosamente [LoginRequest.cs:8]
+- [x] [Review][Patch][Med] Tenant eliminado post-JWT → ITenantContext queda sin resolver; request continúa hacia schemas incorrectos [TenantResolverMiddleware.cs:16-22]
+
+#### [Patch][Low] (8)
+
+- [x] [Review][Patch][Low] Sin CancellationToken en FindAsync de TenantResolverMiddleware [TenantResolverMiddleware.cs:16]
+- [x] [Review][Patch][Low] Middleware consulta DB en cada request incluyendo no-autenticados (login, Scalar, health) [TenantResolverMiddleware.cs:13]
+- [x] [Review][Patch][Low] Double-dispose de TenantDbContext en tests — AuthService lo dispone, test vuelve a llamar DisposeAsync [AuthServiceTests.cs:120,153,177]
+- [x] [Review][Patch][Low] ITenantContext expone setters públicos en la interfaz — cualquier dependiente puede mutar el tenant mid-request [ITenantContext.cs:4-5]
+- [x] [Review][Patch][Low] BCrypt hash inválido o vacío en BD → SaltParseException no controlada → HTTP 500 en vez de 401 [AuthService.cs:49]
+- [x] [Review][Patch][Low] Jwt:ExpiresInDays = 0 o negativo → token emitido ya expirado; cliente recibe 200 pero token no funciona [AuthService.cs:55-56]
+- [x] [Review][Patch][Low] Jwt:Secret demasiado corto → SymmetricSecurityKey lanza en el primer login [ServiceCollectionExtensions.cs:44]
+- [x] [Review][Patch][Low] SchemaName con solo espacios → IsResolved=true pero SET search_path falla en Postgres [TenantContext.cs:7]
+
+#### [Defer] (4)
+
+- [x] [Review][Defer] JWT con 365 días sin mecanismo de revocación — decisión de diseño v1 documentada en spec
+- [x] [Review][Defer] User.UpdatedAt nunca se actualiza tras INSERT — no hay endpoint de update de usuario aún en v1
+- [x] [Review][Defer] Race condition en seed al iniciar dos instancias simultáneas — seed es Development-only; v1 es single-instance en Railway
+- [x] [Review][Defer] ExpiresAt es DateTime en lugar de DateTimeOffset — sin impacto funcional (DateTime.UtcNow serializa con Z)
 
 ## Dev Notes
 
@@ -1436,3 +1479,29 @@ claude-sonnet-4-6 (Claude Code, sesiones 2026-06-27 / 2026-06-28)
 - `backend/src/Sumitrack.Api/Controllers/WeatherForecastController.cs`
 - `backend/src/Sumitrack.Api/WeatherForecast.cs`
 - `backend/tests/Sumitrack.Api.Tests/UnitTest1.cs`
+
+## Senior Developer Review (AI)
+
+**Fecha:** 2026-06-28 | **Outcome:** Approved (todos los patches aplicados)
+
+### Summary
+
+| Severidad | Patches | Decisiones |
+|-----------|---------|-----------|
+| High | 5 (incluye 2 violaciones de AC) | — |
+| Med | 6 | — |
+| Low | 8 | — |
+| Defer | 4 | — |
+| Dismiss | 1 | — |
+| **Decision** | — | **1** |
+
+### Action Items
+
+Ver sección **Review Findings (AI)** en Tasks/Subtasks.
+
+### Notas del revisor
+
+- Los 3 hallazgos de security (SQL injection, connection string injection) son teóricos con schema names `tenant_{guid:N}` actuales, pero deben parchearse para defensa en profundidad antes de añadir paths de creación de tenants.
+- Las 2 violaciones de AC (AC-3 Scalar, AC-4 stack trace) bloquean el cierre de la historia.
+- La **decisión pendiente** (UnauthorizedAccessException vs tipo custom) debe resolverse para marcar todos los patches relacionados.
+- Los hallazgos de seguridad compartidos (schema name injection) se resuelven con una función de validación única, no tres fixes independientes.

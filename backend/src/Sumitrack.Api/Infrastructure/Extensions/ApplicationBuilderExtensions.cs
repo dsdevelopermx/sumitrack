@@ -1,15 +1,18 @@
 using Microsoft.EntityFrameworkCore;
 using Sumitrack.Api.Infrastructure.Data;
 using Sumitrack.Api.Models.Entities;
+using System.Text.RegularExpressions;
 
 namespace Sumitrack.Api.Infrastructure.Extensions;
 
 public static class ApplicationBuilderExtensions
 {
-    private const string CreateTenantSchemaSql = """
-        CREATE SCHEMA IF NOT EXISTS "{0}";
+    private static readonly Regex ValidSchemaName = new(@"^[a-z0-9_]+$", RegexOptions.Compiled);
 
-        CREATE TABLE IF NOT EXISTS "{0}".users (
+    private const string CreateTenantSchemaSql = """
+        CREATE SCHEMA IF NOT EXISTS "{schema}";
+
+        CREATE TABLE IF NOT EXISTS "{schema}".users (
             id UUID NOT NULL,
             username CHARACTER VARYING(100) NOT NULL,
             password_hash CHARACTER VARYING(255) NOT NULL,
@@ -19,7 +22,7 @@ public static class ApplicationBuilderExtensions
             CONSTRAINT pk_users PRIMARY KEY (id)
         );
 
-        CREATE UNIQUE INDEX IF NOT EXISTS ix_users_username ON "{0}".users(username);
+        CREATE UNIQUE INDEX IF NOT EXISTS ix_users_username ON "{schema}".users(username);
         """;
 
     public static async Task ApplyMigrationsAsync(this WebApplication app)
@@ -29,11 +32,9 @@ public static class ApplicationBuilderExtensions
 
         var publicCtx = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        // 1. Apply EF Core migrations for public schema (creates public.tenants)
         await publicCtx.Database.MigrateAsync();
         logger.LogInformation("Public schema migrations applied");
 
-        // 2. For each existing tenant, ensure tenant schema and tables exist
         var tenants = await publicCtx.Tenants.ToListAsync();
 
         foreach (var tenant in tenants)
@@ -41,7 +42,6 @@ public static class ApplicationBuilderExtensions
             await EnsureTenantSchemaAsync(publicCtx, tenant.SchemaName, logger);
         }
 
-        // 3. Development seed: create default tenant + user if none exist
         if (app.Environment.IsDevelopment() && !tenants.Any())
         {
             await SeedDevelopmentAsync(publicCtx, logger);
@@ -53,8 +53,10 @@ public static class ApplicationBuilderExtensions
         string schemaName,
         ILogger logger)
     {
-        // Use raw SQL to create tenant schema and tables (idempotent via IF NOT EXISTS)
-        var sql = string.Format(CreateTenantSchemaSql, schemaName);
+        if (!ValidSchemaName.IsMatch(schemaName))
+            throw new InvalidOperationException($"Invalid schema name '{schemaName}': only lowercase letters, digits, and underscores are allowed.");
+
+        var sql = CreateTenantSchemaSql.Replace("{schema}", schemaName);
         await publicCtx.Database.ExecuteSqlRawAsync(sql);
         logger.LogInformation("Tenant schema {SchemaName} ensured", schemaName);
     }
@@ -75,11 +77,9 @@ public static class ApplicationBuilderExtensions
 
         await EnsureTenantSchemaAsync(publicCtx, schemaName, logger);
 
-        // Insert admin user via raw SQL with positional parameters (EF Core escapes them)
         var passwordHash = BCrypt.Net.BCrypt.HashPassword("Admin123!");
         var userId = Guid.NewGuid();
 
-        // {schemaName} is GUID-based (safe), {0}..{3} become SQL parameters
         await publicCtx.Database.ExecuteSqlRawAsync(
             $"INSERT INTO \"{schemaName}\".users (id, username, password_hash, tenant_id) VALUES ({{0}}, {{1}}, {{2}}, {{3}}) ON CONFLICT (username) DO NOTHING",
             userId, "admin", passwordHash, tenantId);

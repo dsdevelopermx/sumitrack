@@ -41,6 +41,9 @@ public static class ServiceCollectionExtensions
         var jwtSecret = configuration["Jwt:Secret"]
             ?? throw new InvalidOperationException("Jwt:Secret not configured");
 
+        if (Encoding.UTF8.GetByteCount(jwtSecret) < 32)
+            throw new InvalidOperationException("Jwt:Secret must be at least 32 bytes for HMACSHA256");
+
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(opt =>
             {

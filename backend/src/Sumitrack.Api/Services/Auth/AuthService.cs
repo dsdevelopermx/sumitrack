@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Sumitrack.Api.Infrastructure.Auth;
 using Sumitrack.Api.Infrastructure.Data;
 using Sumitrack.Api.Models.Requests;
 using Sumitrack.Api.Models.Responses;
@@ -32,28 +33,41 @@ public class AuthService : IAuthService
         LoginRequest request,
         CancellationToken cancellationToken = default)
     {
-        // v1: one tenant per deployment — resolved from App:TenantSlug config
         var tenantSlug = _configuration["App:TenantSlug"]
             ?? throw new InvalidOperationException("App:TenantSlug not configured");
 
         var tenant = await _publicCtx.Tenants
             .FirstOrDefaultAsync(t => t.Slug == tenantSlug, cancellationToken)
-            ?? throw new UnauthorizedAccessException("INVALID_CREDENTIALS");
+            ?? throw new InvalidOperationException($"Tenant with slug '{tenantSlug}' not found — check App:TenantSlug configuration");
 
         using var tenantCtx = _tenantCtxFactory.Create(tenant.SchemaName);
 
         var user = await tenantCtx.Users
             .FirstOrDefaultAsync(u => u.Username == request.Username, cancellationToken);
 
-        if (user is null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
+        bool passwordValid;
+        try
+        {
+            passwordValid = user is not null && BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash);
+        }
+        catch (BCrypt.Net.SaltParseException)
+        {
+            _logger.LogError("BCrypt salt parse error for user '{Username}' — password hash is corrupt", request.Username);
+            throw new AuthenticationException("INVALID_CREDENTIALS");
+        }
+
+        if (!passwordValid)
         {
             _logger.LogWarning("Failed login for username '{Username}'", request.Username);
-            throw new UnauthorizedAccessException("INVALID_CREDENTIALS");
+            throw new AuthenticationException("INVALID_CREDENTIALS");
         }
 
         var expiresInDays = _configuration.GetValue<int>("Jwt:ExpiresInDays", 365);
+        if (expiresInDays <= 0)
+            throw new InvalidOperationException("Jwt:ExpiresInDays must be a positive integer");
+
         var expiresAt = DateTime.UtcNow.AddDays(expiresInDays);
-        var token = GenerateJwt(user.Id, tenant.Id, expiresAt);
+        var token = GenerateJwt(user!.Id, tenant.Id, expiresAt);
 
         return new LoginResponse { Token = token, ExpiresAt = expiresAt };
     }
