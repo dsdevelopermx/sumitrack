@@ -4,7 +4,7 @@ baseline_commit: e043702
 
 # Story 1.3: Infraestructura Android — Estructura, Room, Hilt y Tema Visual
 
-Status: review
+Status: done
 
 ## Story
 
@@ -93,6 +93,23 @@ para que las historias de negocio (1.4 en adelante) puedan construirse sobre inf
   - [x] `./gradlew :app:assembleDebug` — BUILD SUCCESSFUL, 0 errores, 0 warnings de Hilt
   - [x] `./gradlew :app:testDebugUnitTest` — 12 tests (BigDecimalConverter×6, InstantConverter×5, Example×1), 0 failures
   - [ ] Correr en emulador/dispositivo: NavigationBar visible, 3 tabs funcionando (requiere dispositivo físico/emulador)
+
+### Review Findings
+
+- [x] [Review][Decision] AC-2 Color del indicador NavigationBarItem — resuelto con `NavigationBarItemDefaults.colors(indicatorColor = PrimaryVariant)` en cada item (opción B, aislado). [MainScreen.kt]
+- [x] [Review][Decision] Room sin estrategia de migración — resuelto con `Migrations.kt` + `.addMigrations(*Migrations.ALL)` (opción B, migrations manuales). [DatabaseModule.kt / Migrations.kt]
+- [x] [Review][Patch] BigDecimalConverter.toBigDecimal no captura NumberFormatException — `runCatching { BigDecimal(it) }.getOrNull()` [BigDecimalConverter.kt:8]
+- [x] [Review][Patch] TalkBack anuncia tab dos veces — `contentDescription = null` en el `Icon` [MainScreen.kt]
+- [x] [Review][Patch] `tabs` recreada en cada recomposición sin `remember` — `val tabs = remember { listOf(...) }` [MainScreen.kt:33]
+- [x] [Review][Patch] SettingsEntity.value String no-nullable — `val value: String?` [SettingsEntity.kt:8]
+- [x] [Review][Patch] Shape button=12dp solo en comentario — `val ButtonShape = RoundedCornerShape(12.dp)` [Shape.kt:14]
+- [x] [Review][Patch] Race condition en NavigationBar con taps rápidos — `navController.currentDestination?.route` en el guard del `onClick` [MainScreen.kt:44]
+- [x] [Review][Defer] InstantConverter ArithmeticException para Instant fuera de rango Long millis [InstantConverter.kt:8] — deferred, pre-existing
+- [x] [Review][Defer] Shapes.large asimétrico heredado por AlertDialog/ModalDrawer si se usan en el futuro [Shape.kt:10] — deferred, pre-existing
+- [x] [Review][Defer] Sin dark mode — Force Dark de fabricantes puede afectar legibilidad [Theme.kt] — deferred, pre-existing
+- [x] [Review][Defer] Strings hardcodeadas en NavigationBar ("Órdenes", "Clientes", "Config") — i18n fuera de scope [MainScreen.kt:34-36] — deferred, pre-existing
+- [x] [Review][Defer] android:allowBackup=true — schema mismatch en restore de backup si hay cambios de versión; relacionado con decisión de migración Room [AndroidManifest.xml] — deferred, pre-existing
+- [x] [Review][Defer] isMinifyEnabled=false en release — APK sin ofuscación (pre-existing desde Historia 1.1) [app/build.gradle.kts] — deferred, pre-existing
 
 ## Dev Notes
 
@@ -822,3 +839,4 @@ android/
 ## Change Log
 
 - 2026-06-29: Implementación completa — Hilt + Room 2.8.4 + Navigation Compose 2.9.8 + SumitrackTheme con tokens DESIGN.md. BUILD SUCCESSFUL, 12 unit tests pasando.
+- 2026-06-29: Code review — 8 patches aplicados (NavigationBar color indicador, Room Migrations.kt, BigDecimalConverter safety, TalkBack fix, remember tabs, SettingsEntity nullable, ButtonShape val, race condition). 6 hallazgos diferidos. BUILD SUCCESSFUL.

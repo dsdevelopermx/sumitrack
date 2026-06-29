@@ -11,4 +11,4 @@ val SumitrackShapes = Shapes(
     extraLarge = RoundedCornerShape(20.dp),                                                              // chips y badges
 )
 
-// Buttons usan 12dp — referenciar con RoundedCornerShape(12.dp) en cada componente.
+val ButtonShape = RoundedCornerShape(12.dp)

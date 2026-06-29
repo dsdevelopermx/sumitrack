@@ -1,4 +1,13 @@
 
+## Deferred from: code review de 1-3-infraestructura-android-estructura-room-hilt-y-tema-visual (2026-06-29)
+
+- **InstantConverter ArithmeticException para Instant extremos** — `toEpochMilli()` lanza para Instants fuera del rango Long-millis (~año 292M). Irrelevante en un POS (fechas 2020-2040), pero proteger si se usan centinelas Instant.MAX/MIN. [InstantConverter.kt]
+- **Shapes.large asimétrico** — `large = RoundedCornerShape(topStart=28, topEnd=28, bottom=0)` es correcto para bottom-sheets, pero M3 aplica `Shapes.large` automáticamente a AlertDialog y ModalDrawer. Si se usan esos componentes, quedarán con bordes cuadrados inferiores. Revisar al implementar diálogos. [Shape.kt]
+- **Sin dark mode** — `SumitrackTheme` solo define `lightColorScheme`. Dispositivos con dark mode activo en fabricantes con Force Dark pueden producir UI ilegible. Implementar `darkColorScheme` cuando el producto lo requiera. [Theme.kt]
+- **Strings hardcodeadas en NavigationBar** — "Órdenes", "Clientes", "Config" en código Kotlin, no en `strings.xml`. Mover a recursos de strings si se agrega soporte multilenguaje. [MainScreen.kt]
+- **android:allowBackup=true + sin migración Room** — Backup de schema v1 restaurado en app con schema v2 (sin migración) causa crash en arranque. Mitigar con `<full-backup-content>` excluendo la DB o implementando migrations antes del primer release. [AndroidManifest.xml]
+- **isMinifyEnabled=false en release** — APK completamente reversible con jadx/apktool. Para app fiscal con CFDI, habilitar R8 antes de producción. [app/build.gradle.kts] (pre-existing desde Historia 1.1)
+
 ## Deferred from: code review de 1-2-infraestructura-backend-api-net-postgresql-multi-tenant (2026-06-28)
 
 - **JWT 365 días sin revocación** — Decisión de diseño v1. Sin refresh token ni blacklist. Revisar cuando se añadan roles o multi-sesión.

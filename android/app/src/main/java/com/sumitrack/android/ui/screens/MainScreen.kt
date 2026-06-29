@@ -9,10 +9,12 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -20,6 +22,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.sumitrack.android.ui.navigation.NavGraph
 import com.sumitrack.android.ui.navigation.Routes
+import com.sumitrack.android.ui.theme.PrimaryVariant
 
 private data class NavTab(val route: String, val label: String, val icon: ImageVector)
 
@@ -29,11 +32,13 @@ fun MainScreen() {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    val tabs = listOf(
-        NavTab(Routes.Orders.route,   "Órdenes",  Icons.AutoMirrored.Filled.List),
-        NavTab(Routes.Clients.route,  "Clientes", Icons.Filled.Person),
-        NavTab(Routes.Settings.route, "Config",   Icons.Filled.Settings),
-    )
+    val tabs = remember {
+        listOf(
+            NavTab(Routes.Orders.route,   "Órdenes",  Icons.AutoMirrored.Filled.List),
+            NavTab(Routes.Clients.route,  "Clientes", Icons.Filled.Person),
+            NavTab(Routes.Settings.route, "Config",   Icons.Filled.Settings),
+        )
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -43,7 +48,7 @@ fun MainScreen() {
                     NavigationBarItem(
                         selected = currentRoute == tab.route,
                         onClick = {
-                            if (currentRoute != tab.route) {
+                            if (navController.currentDestination?.route != tab.route) {
                                 navController.navigate(tab.route) {
                                     popUpTo(navController.graph.findStartDestination().id) {
                                         saveState = true
@@ -53,9 +58,12 @@ fun MainScreen() {
                                 }
                             }
                         },
-                        icon = { Icon(tab.icon, contentDescription = tab.label) },
+                        icon = { Icon(tab.icon, contentDescription = null) },
                         label = { Text(tab.label) },
                         alwaysShowLabel = true,
+                        colors = NavigationBarItemDefaults.colors(
+                            indicatorColor = PrimaryVariant,
+                        ),
                     )
                 }
             }
