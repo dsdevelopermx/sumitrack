@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-06-27
-last_updated: 2026-07-06  # updated: 1-4 → done (code review patches applied)
+last_updated: 2026-07-06  # updated: epic-2 → in-progress; 2-1 → ready-for-dev
 project: sumitrack
 project_key: NOKEY
 tracking_system: file-system
@@ -51,8 +51,8 @@ development_status:
   epic-1-retrospective: optional
 
   # ─── Epic 2: Gestión de Clientes y Catálogo de Productos ───
-  epic-2: backlog
-  2-1-lista-y-busqueda-de-clientes: backlog
+  epic-2: in-progress
+  2-1-lista-y-busqueda-de-clientes: ready-for-dev
   2-2-alta-y-edicion-de-cliente: backlog
   2-3-perfil-de-cliente-con-saldo-y-ordenes-abiertas: backlog
   2-4-catalogo-de-productos-y-variantes: backlog
