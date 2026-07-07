@@ -4,7 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import com.sumitrack.android.ui.screens.MainScreen
+import com.sumitrack.android.ui.navigation.AppNavHost
 import com.sumitrack.android.ui.theme.SumitrackTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -15,7 +15,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             SumitrackTheme {
-                MainScreen()
+                AppNavHost()
             }
         }
     }

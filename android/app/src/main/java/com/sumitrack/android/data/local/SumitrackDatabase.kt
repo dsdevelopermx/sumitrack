@@ -5,6 +5,7 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.sumitrack.android.data.local.converters.BigDecimalConverter
 import com.sumitrack.android.data.local.converters.InstantConverter
+import com.sumitrack.android.data.local.dao.SettingsDao
 import com.sumitrack.android.data.local.entities.SettingsEntity
 
 @Database(
@@ -13,4 +14,6 @@ import com.sumitrack.android.data.local.entities.SettingsEntity
     exportSchema = true,
 )
 @TypeConverters(BigDecimalConverter::class, InstantConverter::class)
-abstract class SumitrackDatabase : RoomDatabase()
+abstract class SumitrackDatabase : RoomDatabase() {
+    abstract fun settingsDao(): SettingsDao
+}

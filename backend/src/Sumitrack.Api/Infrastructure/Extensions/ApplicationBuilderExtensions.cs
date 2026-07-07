@@ -23,6 +23,13 @@ public static class ApplicationBuilderExtensions
         );
 
         CREATE UNIQUE INDEX IF NOT EXISTS ix_users_username ON "{schema}".users(username);
+
+        CREATE TABLE IF NOT EXISTS "{schema}".settings (
+            key CHARACTER VARYING(100) NOT NULL,
+            value TEXT,
+            updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+            CONSTRAINT pk_settings PRIMARY KEY (key)
+        );
         """;
 
     public static async Task ApplyMigrationsAsync(this WebApplication app)
@@ -83,6 +90,14 @@ public static class ApplicationBuilderExtensions
         await publicCtx.Database.ExecuteSqlRawAsync(
             $"INSERT INTO \"{schemaName}\".users (id, username, password_hash, tenant_id) VALUES ({{0}}, {{1}}, {{2}}, {{3}}) ON CONFLICT (username) DO NOTHING",
             userId, "admin", passwordHash, tenantId);
+
+        await publicCtx.Database.ExecuteSqlRawAsync($"""
+            INSERT INTO "{schemaName}".settings (key, value) VALUES
+                ('max_parcialidades', '15'),
+                ('serie_folio', 'A'),
+                ('dias_anticipacion_recordatorio', '3')
+            ON CONFLICT (key) DO NOTHING
+            """);
 
         logger.LogWarning(
             "DEVELOPMENT SEED: Tenant 'local' (slug) created with schema {Schema}. " +

@@ -8,6 +8,7 @@ public class TenantDbContext : DbContext
     public TenantDbContext(DbContextOptions<TenantDbContext> options) : base(options) { }
 
     public DbSet<User> Users => Set<User>();
+    public DbSet<Setting> Settings => Set<Setting>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -39,6 +40,24 @@ public class TenantDbContext : DbContext
                 .HasColumnName("created_at")
                 .HasColumnType("timestamp with time zone")
                 .HasDefaultValueSql("NOW()");
+            entity.Property(e => e.UpdatedAt)
+                .HasColumnName("updated_at")
+                .HasColumnType("timestamp with time zone")
+                .HasDefaultValueSql("NOW()");
+        });
+
+        modelBuilder.Entity<Setting>(entity =>
+        {
+            entity.ToTable("settings");
+            entity.HasKey(e => e.Key);
+            entity.Property(e => e.Key)
+                .HasColumnName("key")
+                .HasColumnType("character varying(100)")
+                .HasMaxLength(100)
+                .IsRequired();
+            entity.Property(e => e.Value)
+                .HasColumnName("value")
+                .HasColumnType("text");
             entity.Property(e => e.UpdatedAt)
                 .HasColumnName("updated_at")
                 .HasColumnType("timestamp with time zone")

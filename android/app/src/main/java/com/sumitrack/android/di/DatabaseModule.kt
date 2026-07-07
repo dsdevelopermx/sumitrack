@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.sumitrack.android.data.local.Migrations
 import com.sumitrack.android.data.local.SumitrackDatabase
+import com.sumitrack.android.data.local.dao.SettingsDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -21,4 +22,8 @@ object DatabaseModule {
         Room.databaseBuilder(context, SumitrackDatabase::class.java, "sumitrack_01")
             .addMigrations(*Migrations.ALL)
             .build()
+
+    @Provides
+    @Singleton
+    fun provideSettingsDao(db: SumitrackDatabase): SettingsDao = db.settingsDao()
 }
