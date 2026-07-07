@@ -16,4 +16,8 @@ class SettingsRepository @Inject constructor(
         val entities = dtos.map { SettingsEntity(key = it.key, value = it.value) }
         settingsDao.upsertAll(entities)
     }
+
+    suspend fun clearLocalSettings() {
+        settingsDao.deleteAll()
+    }
 }

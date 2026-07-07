@@ -66,12 +66,12 @@ fun SettingsScreen(
     if (uiState.showLogoutDialog) {
         AlertDialog(
             onDismissRequest = viewModel::onLogoutDismiss,
-            title = { Text("Cerrar sesión") },
+            title = { Text("¿Cerrar sesión?") },
             text = { Text("¿Estás seguro que deseas cerrar sesión?") },
             confirmButton = {
                 TextButton(onClick = viewModel::onLogoutConfirm) {
                     Text(
-                        text = "Cerrar sesión",
+                        text = "Sí, salir",
                         color = MaterialTheme.colorScheme.error,
                     )
                 }

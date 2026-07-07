@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-06-27
-last_updated: 2026-07-06  # updated: 1-4 → review
+last_updated: 2026-07-06  # updated: 1-4 → done (code review patches applied)
 project: sumitrack
 project_key: NOKEY
 tracking_system: file-system
@@ -47,7 +47,7 @@ development_status:
   1-1-configuracion-del-monorepo-y-pipeline-ci-cd: done
   1-2-infraestructura-backend-api-net-postgresql-multi-tenant: done
   1-3-infraestructura-android-estructura-room-hilt-y-tema-visual: done
-  1-4-inicio-de-sesion-sesion-persistente-y-cierre-de-sesion: review
+  1-4-inicio-de-sesion-sesion-persistente-y-cierre-de-sesion: done
   epic-1-retrospective: optional
 
   # ─── Epic 2: Gestión de Clientes y Catálogo de Productos ───

@@ -4,7 +4,7 @@ baseline_commit: 2284a74a9d2a8640c285cc5b969b3fa71e75c309
 
 # Story 1.4: Inicio de Sesión, Sesión Persistente y Cierre de Sesión
 
-Status: review
+Status: done
 
 ## Story
 
@@ -126,6 +126,49 @@ para que pueda operar desde cualquier dispositivo Android sin autenticarme en ca
   - [x] `./gradlew :app:assembleDebug` — BUILD SUCCESSFUL
   - [x] `./gradlew :app:testDebugUnitTest` — 0 failures (agregar tests unitarios para `LoginViewModel` y `AuthRepository`)
   - [x] Verificar en emulador: sin sesión → muestra Login; con credenciales válidas → navega a S-02; credenciales inválidas → muestra error; cerrar sesión → regresa a Login
+
+### Review Findings
+
+<!-- Code review generado 2026-07-06 — claude-sonnet-4-6. 3 capas: Blind Hunter + Edge Case Hunter + Acceptance Auditor -->
+
+#### Decision Needed
+
+- [x] [Review][Patch] **RD-1→RP-0: Refactorizar AppNavHost a Routes.Login + Routes.Orders** (decisión: seguir patrón del spec) — Dev Notes advierten explícitamente "No crear una ruta Routes.Main separada — complica el back stack". La implementación usa `Routes.Auth` + `Routes.Main` (auth_graph/main_graph). `Routes.Login` existe pero nunca se usa (dead code). Alternativa spec: registrar `MainScreen` bajo `Routes.Orders.route` en el NavHost exterior, eliminar `Routes.Main` y `Routes.Auth`. ¿Seguir el patrón del spec o mantener el wrapper de dos niveles? [AppNavHost.kt, Routes.kt]
+
+#### Patches — High
+
+- [x] [Review][Patch] **RP-1: Botón dice "Iniciar sesión" — spec exige "Entrar"** (AC-1) [LoginScreen.kt:692]
+- [x] [Review][Patch] **RP-2: OutlinedTextField sin `isError` ni `supportingText`** — error mostrado como `Text` suelto fuera del campo; `LoginUiState` no tiene `usernameError`/`passwordError` (AC-1, AC-3) [LoginScreen.kt:629-671]
+- [x] [Review][Patch] **RP-3: Mensaje de credenciales incorrectas falta ". Inténtalo de nuevo."** (AC-3) [LoginViewModel.kt:753]
+- [x] [Review][Patch] **RP-4: AC-6 sin implementar** — offline no detectado en init, texto incorrecto ("Error de conexión…" vs "Se requiere conexión a internet para el primer acceso."), styled como error (rojo) en lugar de informativo (AC-6) [LoginViewModel.kt:755, LoginScreen.kt:664-671]
+- [x] [Review][Patch] **RP-5: Cleartext HTTP bloqueado en API 28+** — URL debug `http://10.0.2.2:5000/` sin `android:usesCleartextTraffic="true"` o network_security_config; crash en runtime en dispositivos físicos y emuladores Android 9+ [app/build.gradle.kts:17]
+- [x] [Review][Patch] **RP-6: Split-brain si falla descarga de settings** — `saveToken()` se llama ANTES de `downloadAndCacheSettings()`; si el fetch de settings falla, el token queda guardado y en el próximo arranque la app muestra LoggedIn con tabla settings vacía [AuthRepository.kt:227-229]
+- [x] [Review][Patch] **RP-7: HTTP 401 de `/settings` mostrado como "credenciales incorrectas"** — `recoverCatching` envuelve TODO el bloque incluyendo la llamada a settings; un 401 del endpoint settings (ej: timing, permiso de tenant) se re-mapea a `InvalidCredentialsException` aunque el login fue exitoso [AuthRepository.kt:230-234]
+- [x] [Review][Patch] **RP-8: `isLoading` no se resetea a `false` en login exitoso** — `onSuccess { onSuccess() }` se llama con `isLoading = true`; spinner queda activo si hay latencia en la navegación [LoginViewModel.kt:750-751]
+- [x] [Review][Patch] **RP-9: Doble navegación en AppNavHost al arranque** — `startDestination` ya establece la ruta correcta Y `LaunchedEffect(sessionState)` navega de nuevo al mismo destino en la primera composición; ruta duplicada en el back stack [AppNavHost.kt:495-527]
+- [x] [Review][Patch] **RP-10: Room/settings no limpiados en logout** — `onLogoutConfirm()` solo llama `clearToken()`; tabla `settings` con datos del tenant anterior persiste hasta el próximo sync (AC-7: "los datos de sesión se limpian") [SettingsViewModel.kt:897-901]
+- [x] [Review][Patch] **RP-11: Race condition teclado + botón → dos coroutines de login** — `ImeAction.Done` y `onClick` pueden dispararse antes de que `isLoading` cause recomposición; falta guard `if (_uiState.value.isLoading) return` al inicio de `onLoginClick` [LoginViewModel.kt:741]
+
+#### Patches — Med
+
+- [x] [Review][Patch] **RP-12: AlertDialog title "Cerrar sesión" → debe ser "¿Cerrar sesión?"** (AC-7) [SettingsScreen.kt:841]
+- [x] [Review][Patch] **RP-13: Confirm button "Cerrar sesión" → debe ser "Sí, salir"** (AC-7) [SettingsScreen.kt:843]
+- [x] [Review][Patch] **RP-14: `Setting.cs` property initializer anula `HasDefaultValueSql("NOW()")`** — EF Core siempre envía `DateTime.UtcNow` en INSERT, la columna `updated_at` nunca es gestionada por la DB [Setting.cs:7, TenantDbContext.cs:1028]
+- [x] [Review][Patch] **RP-15: Token vacío `""` almacenado como sesión válida** — `isLoggedIn` emite `true` para cualquier string no-null; todas las llamadas API enviarán `"Bearer "` y recibirán 401 [SessionManager.kt:266]
+- [x] [Review][Patch] **RP-16: `rememberNavController()` dentro de rama condicional** — viola reglas de hoisting de Compose (state holders deben llamarse incondicionalmente en el top-level de la función) [AppNavHost.kt:500]
+- [x] [Review][Patch] **RP-17: Password logueado en claro via `Level.BODY`** — interceptor debug imprime el body completo del LoginRequestDto (username + password) en logcat [NetworkModule.kt:360]
+- [x] [Review][Patch] **RP-18: Lambda de navegación capturada en coroutine del ViewModel** — `onSuccess` lambda creada en Composable es capturada por `viewModelScope.launch`; post-rotación la lambda puede referenciar un NavController obsoleto [LoginViewModel.kt:741-759, AppNavHost.kt:515-520]
+
+#### Defer
+
+- [x] [Review][Defer] Token JWT en DataStore sin cifrar — considerar `EncryptedSharedPreferences` en Epic 4 (Sincronización Offline) [SessionManager.kt] — deferred, pre-existing arch decision
+- [x] [Review][Defer] Sin interceptor OkHttp para Authorization header — auth manual en cada servicio API; refactorizar cuando haya ≥3 servicios [NetworkModule.kt] — deferred, pre-existing
+- [x] [Review][Defer] `DbSet<Setting>` + raw DDL mezclados — si se corre `dotnet ef migrations add` generará migración conflictiva; consolidar estrategia en Epic 4 [TenantDbContext.cs] — deferred, pre-existing arch
+- [x] [Review][Defer] `expiresAt` del JWT nunca verificado — app no detecta token expirado en foreground; implementar en Historia 4.2 (Pull inicial y folio del servidor al hacer login) [LoginResponseDto.kt] — deferred, out of story scope
+- [x] [Review][Defer] `upsertAll` sin previa `deleteAll` — keys eliminadas en servidor persisten en local DB indefinidamente [SettingsRepository.kt:295] — deferred, diseño de sync a definir en Epic 4
+- [x] [Review][Defer] Slug de tenant interpolado en SQL raw sin validar — riesgo de inyección si slug contiene `"` [ApplicationBuilderExtensions.cs:1056] — deferred, pre-existing
+- [x] [Review][Defer] Tabla settings ausente causa 500 no manejado en `SettingsController` [SettingsController.cs:989] — deferred, infrastructure concern
+- [x] [Review][Defer] `clearToken()` sin manejo de `IOException` — usuario aparece logueado si DataStore falla [SettingsViewModel.kt:897] — deferred, defensive programming
 
 ## Dev Notes
 

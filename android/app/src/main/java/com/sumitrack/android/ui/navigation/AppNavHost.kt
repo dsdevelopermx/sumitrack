@@ -22,6 +22,18 @@ import com.sumitrack.android.ui.screens.auth.LoginScreen
 fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
     val sessionState by appViewModel.sessionState.collectAsStateWithLifecycle()
 
+    // Hoisted unconditionally — evita violación de reglas de Compose sobre @Composable en ramas
+    val navController = rememberNavController()
+
+    // Solo reacciona a LoggedOut: la navegación a órdenes la maneja onLoginSuccess/startDestination
+    LaunchedEffect(sessionState) {
+        if (sessionState == SessionState.LoggedOut) {
+            navController.navigate(Routes.Login.route) {
+                popUpTo(navController.graph.id) { inclusive = true }
+            }
+        }
+    }
+
     when (sessionState) {
         SessionState.Loading -> {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -30,34 +42,21 @@ fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
         }
 
         else -> {
-            val startDestination = when (sessionState) {
-                SessionState.LoggedIn -> Routes.Main.route
-                else -> Routes.Auth.route
-            }
-
-            val navController = rememberNavController()
-
-            LaunchedEffect(sessionState) {
-                when (sessionState) {
-                    SessionState.LoggedOut -> navController.navigate(Routes.Auth.route) {
-                        popUpTo(navController.graph.id) { inclusive = true }
-                    }
-                    SessionState.LoggedIn -> navController.navigate(Routes.Main.route) {
-                        popUpTo(navController.graph.id) { inclusive = true }
-                    }
-                    else -> Unit
-                }
+            val startDestination = if (sessionState == SessionState.LoggedIn) {
+                Routes.Orders.route
+            } else {
+                Routes.Login.route
             }
 
             NavHost(navController = navController, startDestination = startDestination) {
-                composable(Routes.Auth.route) {
+                composable(Routes.Login.route) {
                     LoginScreen(onLoginSuccess = {
-                        navController.navigate(Routes.Main.route) {
-                            popUpTo(Routes.Auth.route) { inclusive = true }
+                        navController.navigate(Routes.Orders.route) {
+                            popUpTo(Routes.Login.route) { inclusive = true }
                         }
                     })
                 }
-                composable(Routes.Main.route) {
+                composable(Routes.Orders.route) {
                     MainScreen()
                 }
             }

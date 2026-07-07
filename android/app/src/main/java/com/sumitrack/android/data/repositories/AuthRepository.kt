@@ -13,14 +13,25 @@ class AuthRepository @Inject constructor(
     private val sessionManager: SessionManager,
     private val settingsRepository: SettingsRepository,
 ) {
-    suspend fun login(username: String, password: String): Result<Unit> = runCatching {
-        val response = authApiService.login(LoginRequestDto(username, password))
+    suspend fun login(username: String, password: String): Result<Unit> {
+        // Step 1: Authenticate — map 401 specifically to InvalidCredentialsException
+        val response = runCatching {
+            authApiService.login(LoginRequestDto(username, password))
+        }.recoverCatching { e ->
+            when {
+                e is HttpException && e.code() == 401 -> throw InvalidCredentialsException()
+                else -> throw e
+            }
+        }.getOrElse { return Result.failure(it) }
+
+        // Step 2: Persist token
         sessionManager.saveToken(response.token)
-        settingsRepository.downloadAndCacheSettings(response.token)
-    }.recoverCatching { e ->
-        when {
-            e is HttpException && e.code() == 401 -> throw InvalidCredentialsException()
-            else -> throw e
+
+        // Step 3: Download settings — roll back token if this fails
+        return runCatching {
+            settingsRepository.downloadAndCacheSettings(response.token)
+        }.onFailure {
+            sessionManager.clearToken()
         }
     }
 }

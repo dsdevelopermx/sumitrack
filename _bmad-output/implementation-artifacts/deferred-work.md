@@ -1,4 +1,15 @@
 
+## Deferred from: code review de 1-4-inicio-de-sesion-sesion-persistente-y-cierre-de-sesion (2026-07-06)
+
+- **Token JWT en DataStore sin cifrar** — Considerar `EncryptedSharedPreferences` en Epic 4 cuando se implemente sincronización offline. [SessionManager.kt]
+- **Sin interceptor OkHttp para Authorization header** — Auth manual en cada servicio API; refactorizar cuando haya ≥3 servicios autenticados. [NetworkModule.kt]
+- **`DbSet<Setting>` + raw DDL mezclados** — Si se corre `dotnet ef migrations add` generará migración conflictiva con tabla ya existente. Consolidar estrategia de migraciones en Epic 4. [TenantDbContext.cs]
+- **`expiresAt` del JWT nunca verificado** — App no detecta token expirado en foreground; implementar en Historia 4.2 (Pull inicial y folio del servidor al hacer login). [LoginResponseDto.kt]
+- **`upsertAll` sin previa `deleteAll`** — Keys eliminadas en servidor persisten en local DB; diseño de sync a definir en Epic 4 (Historia 4.1). [SettingsRepository.kt]
+- **Slug de tenant interpolado en SQL raw sin validar** — Riesgo de inyección si slug contiene `"`; pre-existing, sanitizar con regex `^[a-z0-9_-]+$`. [ApplicationBuilderExtensions.cs]
+- **Tabla settings ausente causa 500 no manejado** — Infrastructure concern; agregar try/catch con 503 en SettingsController. [SettingsController.cs]
+- **`clearToken()` sin manejo de IOException** — Usuario aparece logueado si DataStore falla al escribir; defensive programming. [SettingsViewModel.kt]
+
 ## Deferred from: code review de 1-3-infraestructura-android-estructura-room-hilt-y-tema-visual (2026-06-29)
 
 - **InstantConverter ArithmeticException para Instant extremos** — `toEpochMilli()` lanza para Instants fuera del rango Long-millis (~año 292M). Irrelevante en un POS (fechas 2020-2040), pero proteger si se usan centinelas Instant.MAX/MIN. [InstantConverter.kt]

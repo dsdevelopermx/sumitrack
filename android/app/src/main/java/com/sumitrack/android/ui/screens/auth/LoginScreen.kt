@@ -19,6 +19,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,6 +40,11 @@ fun LoginScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val focusManager = LocalFocusManager.current
+
+    // Escucha eventos de navegación — lambda no toca el ViewModel
+    LaunchedEffect(Unit) {
+        viewModel.navEvent.collect { onLoginSuccess() }
+    }
 
     Scaffold { paddingValues ->
         Box(
@@ -78,6 +84,7 @@ fun LoginScreen(
                     label = { Text("Usuario") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
+                    isError = uiState.usernameError,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                     keyboardActions = KeyboardActions(
                         onNext = { focusManager.moveFocus(FocusDirection.Down) },
@@ -94,6 +101,10 @@ fun LoginScreen(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     visualTransformation = PasswordVisualTransformation(),
+                    isError = uiState.passwordError,
+                    supportingText = uiState.errorMessage?.let { msg ->
+                        { Text(text = msg, color = MaterialTheme.colorScheme.error) }
+                    },
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Password,
                         imeAction = ImeAction.Done,
@@ -101,17 +112,18 @@ fun LoginScreen(
                     keyboardActions = KeyboardActions(
                         onDone = {
                             focusManager.clearFocus()
-                            viewModel.onLoginClick(onLoginSuccess)
+                            viewModel.onLoginClick()
                         },
                     ),
                     enabled = !uiState.isLoading,
                 )
 
-                if (uiState.errorMessage != null) {
+                // AC-6: aviso offline informativo (no como error)
+                if (uiState.isOffline && uiState.errorMessage == null) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = uiState.errorMessage!!,
-                        color = MaterialTheme.colorScheme.error,
+                        text = "Se requiere conexión a internet para el primer acceso.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
@@ -121,7 +133,7 @@ fun LoginScreen(
                 Button(
                     onClick = {
                         focusManager.clearFocus()
-                        viewModel.onLoginClick(onLoginSuccess)
+                        viewModel.onLoginClick()
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -135,7 +147,7 @@ fun LoginScreen(
                             strokeWidth = 2.dp,
                         )
                     } else {
-                        Text("Iniciar sesión")
+                        Text("Entrar")
                     }
                 }
             }
