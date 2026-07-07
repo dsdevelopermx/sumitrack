@@ -52,7 +52,7 @@ development_status:
 
   # ─── Epic 2: Gestión de Clientes y Catálogo de Productos ───
   epic-2: in-progress
-  2-1-lista-y-busqueda-de-clientes: ready-for-dev
+  2-1-lista-y-busqueda-de-clientes: review
   2-2-alta-y-edicion-de-cliente: backlog
   2-3-perfil-de-cliente-con-saldo-y-ordenes-abiertas: backlog
   2-4-catalogo-de-productos-y-variantes: backlog

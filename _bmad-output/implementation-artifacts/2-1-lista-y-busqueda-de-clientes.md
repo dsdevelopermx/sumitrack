@@ -1,10 +1,10 @@
 ---
-# baseline_commit se establece al inicio del desarrollo (dev-story lo agrega)
+baseline_commit: 55e4f3d05f8dd2611676ad9b82054eeb592a5bf5
 ---
 
 # Story 2.1: Lista y Búsqueda de Clientes
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -42,45 +42,45 @@ para que pueda encontrar a cualquier cliente en segundos mientras estoy en campo
 
 ### Android — Capa de dominio
 
-- [ ] **T1: SyncStatus enum + domain model Client** (AC-1)
-  - [ ] Crear `domain/models/SyncStatus.kt` — `enum class SyncStatus { SYNCED, PENDING, CONFLICT }`
-  - [ ] Crear `domain/models/Client.kt` — data class puro (sin Room/Retrofit): `id: String`, `fkTenant: String`, `name: String`, `phone: String`, `rfc: String?`, `address: String?`, `notes: String?`, `createdAt: Instant`, `updatedAt: Instant`, `syncStatus: SyncStatus`, `balance: BigDecimal = BigDecimal.ZERO`
-  - [ ] Crear `domain/usecases/CalculateClientBalanceUseCase.kt` — stub que retorna `BigDecimal.ZERO`; documentar con `// TODO Historia 3.x: inyectar SaleRepository y sumar ventas en estado PENDING/PARTIAL`
+- [x] **T1: SyncStatus enum + domain model Client** (AC-1)
+  - [x] Crear `domain/models/SyncStatus.kt` — `enum class SyncStatus { SYNCED, PENDING, CONFLICT }`
+  - [x] Crear `domain/models/Client.kt` — data class puro (sin Room/Retrofit): `id: String`, `fkTenant: String`, `name: String`, `phone: String`, `rfc: String?`, `address: String?`, `notes: String?`, `createdAt: Instant`, `updatedAt: Instant`, `syncStatus: SyncStatus`, `balance: BigDecimal = BigDecimal.ZERO`
+  - [x] Crear `domain/usecases/CalculateClientBalanceUseCase.kt` — stub que retorna `BigDecimal.ZERO`; documentar con `// TODO Historia 3.x: inyectar SaleRepository y sumar ventas en estado PENDING/PARTIAL`
 
 ### Android — Capa de datos (Room)
 
-- [ ] **T2: ClientEntity + ClientDao** (AC-1, AC-2, AC-4)
-  - [ ] Crear `data/local/entities/ClientEntity.kt` — `@Entity(tableName = "clients")` con columnas snake_case vía `@ColumnInfo`; campos obligatorios de sync (AR-6): `id` TEXT PK, `fk_tenant` TEXT, `name` TEXT, `phone` TEXT, `rfc` TEXT nullable, `address` TEXT nullable, `notes` TEXT nullable, `created_at` INTEGER (Instant vía InstantConverter), `updated_at` INTEGER, `sync_status` TEXT; usar `@ColumnInfo(name = "fk_tenant")` en Kotlin-camelCase para garantizar naming AR-16
-  - [ ] Crear `data/local/dao/ClientDao.kt` con:
+- [x] **T2: ClientEntity + ClientDao** (AC-1, AC-2, AC-4)
+  - [x] Crear `data/local/entities/ClientEntity.kt` — `@Entity(tableName = "clients")` con columnas snake_case vía `@ColumnInfo`; campos obligatorios de sync (AR-6): `id` TEXT PK, `fk_tenant` TEXT, `name` TEXT, `phone` TEXT, `rfc` TEXT nullable, `address` TEXT nullable, `notes` TEXT nullable, `created_at` INTEGER (Instant vía InstantConverter), `updated_at` INTEGER, `sync_status` TEXT; usar `@ColumnInfo(name = "fk_tenant")` en Kotlin-camelCase para garantizar naming AR-16
+  - [x] Crear `data/local/dao/ClientDao.kt` con:
     - `@Query("SELECT * FROM clients ORDER BY name ASC") fun getAllAsFlow(): Flow<List<ClientEntity>>`
     - `@Query("SELECT * FROM clients WHERE name LIKE '%' || :query || '%' ORDER BY name ASC") fun searchByNameAsFlow(query: String): Flow<List<ClientEntity>>`
     - `@Upsert suspend fun upsertAll(clients: List<ClientEntity>)`
     - `@Query("SELECT * FROM clients WHERE id = :id LIMIT 1") suspend fun getById(id: String): ClientEntity?`
 
-- [ ] **T3: Bump SumitrackDatabase a versión 2** (AC-1)
-  - [ ] Actualizar `Migrations.kt` — agregar `MIGRATION_1_2 = Migration(1, 2) { db -> db.execSQL("CREATE TABLE IF NOT EXISTS clients (id TEXT NOT NULL PRIMARY KEY, fk_tenant TEXT NOT NULL, name TEXT NOT NULL, phone TEXT NOT NULL, rfc TEXT, address TEXT, notes TEXT, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, sync_status TEXT NOT NULL DEFAULT 'synced')") }` y agregar a `ALL`
-  - [ ] Actualizar `SumitrackDatabase.kt` — añadir `ClientEntity::class` en `@Database(entities = [...])`, bump `version = 2`, agregar `abstract fun clientDao(): ClientDao`
-  - [ ] Actualizar `DatabaseModule.kt` — agregar `@Provides @Singleton fun provideClientDao(db: SumitrackDatabase): ClientDao = db.clientDao()`
+- [x] **T3: Bump SumitrackDatabase a versión 2** (AC-1)
+  - [x] Actualizar `Migrations.kt` — agregar `MIGRATION_1_2 = Migration(1, 2) { db -> db.execSQL("CREATE TABLE IF NOT EXISTS clients (id TEXT NOT NULL PRIMARY KEY, fk_tenant TEXT NOT NULL, name TEXT NOT NULL, phone TEXT NOT NULL, rfc TEXT, address TEXT, notes TEXT, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, sync_status TEXT NOT NULL DEFAULT 'synced')") }` y agregar a `ALL`
+  - [x] Actualizar `SumitrackDatabase.kt` — añadir `ClientEntity::class` en `@Database(entities = [...])`, bump `version = 2`, agregar `abstract fun clientDao(): ClientDao`
+  - [x] Actualizar `DatabaseModule.kt` — agregar `@Provides @Singleton fun provideClientDao(db: SumitrackDatabase): ClientDao = db.clientDao()`
 
-- [ ] **T4: ClientRepository** (AC-1, AC-2, AC-4)
-  - [ ] Crear `data/repositories/ClientRepository.kt` — `@Singleton`; inyecta `ClientDao` y `CalculateClientBalanceUseCase`; método `fun getAllClients(): Flow<List<Client>>` (mapea entidad → dominio, balance = usecase.invoke); método `fun searchClients(query: String): Flow<List<Client>>`; método privado `ClientEntity.toDomain()` que mapea campos y convierte syncStatus String → SyncStatus enum con fallback a `PENDING`
+- [x] **T4: ClientRepository** (AC-1, AC-2, AC-4)
+  - [x] Crear `data/repositories/ClientRepository.kt` — `@Singleton`; inyecta `ClientDao` y `CalculateClientBalanceUseCase`; método `fun getAllClients(): Flow<List<Client>>` (mapea entidad → dominio, balance = usecase.invoke); método `fun searchClients(query: String): Flow<List<Client>>`; método privado `ClientEntity.toDomain()` que mapea campos y convierte syncStatus String → SyncStatus enum con fallback a `PENDING`
 
 ### Android — Capa UI (Componentes)
 
-- [ ] **T5: Componente SyncIcon** (AC-1)
-  - [ ] Crear `ui/components/SyncIcon.kt` — `@Composable fun SyncIcon(isSynced: Boolean, modifier: Modifier = Modifier)`:
+- [x] **T5: Componente SyncIcon** (AC-1)
+  - [x] Crear `ui/components/SyncIcon.kt` — `@Composable fun SyncIcon(isSynced: Boolean, modifier: Modifier = Modifier)`:
     - Cuando `isSynced = true`: `Icon` con `Icons.Filled.CloudDone` (o similar), color `SyncOk` (#00BCD4), `contentDescription = "Sincronizado con la nube."`, tamaño mínimo 20dp
     - Cuando `isSynced = false`: `Icon` con `Icons.Outlined.Cloud`, color `SyncPending` (#FF7043), `contentDescription = "Pendiente de sincronizar."`, tamaño mínimo 20dp
     - IMPORTANTE: usar los colores de `ui/theme/Color.kt` (ya definidos en Historia 1.3 como `SyncOk` y `SyncPending`); NO usar `sync-ok` como color de texto nunca
 
-- [ ] **T6: Componente EmptyState** (AC-3)
-  - [ ] Crear `ui/components/EmptyState.kt` — `@Composable fun EmptyState(iconRes: ImageVector, message: String, modifier: Modifier = Modifier)`:
+- [x] **T6: Componente EmptyState** (AC-3)
+  - [x] Crear `ui/components/EmptyState.kt` — `@Composable fun EmptyState(iconRes: ImageVector, message: String, modifier: Modifier = Modifier)`:
     - Icono outlined en `on-surface-variant`, tamaño 64dp
     - Mensaje en `body-large/on-surface-variant`, centrado
     - `contentDescription = "Cargando..."` para el container cuando se usa como skeleton (reutilizable)
 
-- [ ] **T7: Componente ClientCard** (AC-1)
-  - [ ] Crear `ui/components/ClientCard.kt` — `@Composable fun ClientCard(client: Client, onClick: () -> Unit, modifier: Modifier = Modifier)`:
+- [x] **T7: Componente ClientCard** (AC-1)
+  - [x] Crear `ui/components/ClientCard.kt` — `@Composable fun ClientCard(client: Client, onClick: () -> Unit, modifier: Modifier = Modifier)`:
     - `ElevatedCard` con `elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp)`, `shape = MaterialTheme.shapes.medium` (16dp per DESIGN.md), `onClick = onClick`
     - Padding interno: `14dp vertical / 16dp horizontal` (UX-DR4)
     - Fila principal: nombre en `body-large`, teléfono en `body-medium/on-surface-variant`, saldo en `title-medium/primary` (`"$%,.2f".format(...)` con separador de miles)
@@ -88,8 +88,8 @@ para que pueda encontrar a cualquier cliente en segundos mientras estoy en campo
     - `Modifier.semantics(mergeDescendants = true)` para TalkBack — anuncia como unidad (UX-DR20)
     - Saldo formateado: `"$${client.balance.setScale(2, RoundingMode.HALF_UP).toPlainString()}"` — NUNCA Double ni Float
 
-- [ ] **T8: Componente FilterChipRow** (AC-1)
-  - [ ] Crear `ui/components/FilterChipRow.kt` — `@Composable fun FilterChipRow<T>(chips: List<FilterChipData<T>>, selectedChip: T?, onChipSelected: (T?) -> Unit, modifier: Modifier = Modifier)` donde `data class FilterChipData<T>(val id: T, val label: String)`:
+- [x] **T8: Componente FilterChipRow** (AC-1)
+  - [x] Crear `ui/components/FilterChipRow.kt` — `@Composable fun FilterChipRow<T>(chips: List<FilterChipData<T>>, selectedChip: T?, onChipSelected: (T?) -> Unit, modifier: Modifier = Modifier)` donde `data class FilterChipData<T>(val id: T, val label: String)`:
     - `LazyRow` horizontal con `horizontalArrangement = Arrangement.spacedBy(8.dp)`
     - `FilterChip` M3 por cada chip; chip activo: `selected = true` → M3 maneja fondo `primary-variant` + `leadingIcon = checkmark` automáticamente via `FilterChip(selected = true, leadingIcon = Icons.Filled.Check)`
     - Solo un chip activo a la vez; tap en chip activo lo deselecciona (toggle)
@@ -97,8 +97,8 @@ para que pueda encontrar a cualquier cliente en segundos mientras estoy en campo
 
 ### Android — UI Screen S-11
 
-- [ ] **T9: ClientListViewModel** (AC-1, AC-2, AC-3, AC-4)
-  - [ ] Crear `ui/screens/clients/ClientListViewModel.kt` — `@HiltViewModel`:
+- [x] **T9: ClientListViewModel** (AC-1, AC-2, AC-3, AC-4)
+  - [x] Crear `ui/screens/clients/ClientListViewModel.kt` — `@HiltViewModel`:
     ```kotlin
     @HiltViewModel
     class ClientListViewModel @Inject constructor(
@@ -118,10 +118,10 @@ para que pueda encontrar a cualquier cliente en segundos mientras estoy en campo
         fun onSearchClear() { _searchQuery.value = "" }
     }
     ```
-  - [ ] Importar `kotlinx.coroutines.flow.flatMapLatest` (experimental-stable en kotlinx-coroutines 1.7+)
+  - [x] Importar `kotlinx.coroutines.flow.flatMapLatest` (experimental-stable en kotlinx-coroutines 1.7+)
 
-- [ ] **T10: ClientListScreen — S-11 completa** (AC-1, AC-2, AC-3, AC-4)
-  - [ ] Reemplazar el placeholder en `ui/screens/clients/ClientListScreen.kt` con implementación completa:
+- [x] **T10: ClientListScreen — S-11 completa** (AC-1, AC-2, AC-3, AC-4)
+  - [x] Reemplazar el placeholder en `ui/screens/clients/ClientListScreen.kt` con implementación completa:
     - `@Composable fun ClientListScreen(modifier: Modifier = Modifier, viewModel: ClientListViewModel = hiltViewModel())`
     - `SearchBar` M3 en la parte superior con `active`/`onActiveChange`, `query`/`onQueryChange`
     - Debajo del SearchBar: `FilterChipRow(chips = emptyList(), ...)` — expansible pero sin chips en v1
@@ -132,12 +132,12 @@ para que pueda encontrar a cualquier cliente en segundos mientras estoy en campo
     - `PullToRefreshBox` (M3 experimental): `@OptIn(ExperimentalMaterial3Api::class)`, `isRefreshing = false`, `onRefresh = { /* Historia 4.x: trigger sync */ }` — pull-to-refresh visual sin lógica real por ahora
     - `Scaffold` con `floatingActionButton = { ExtendedFloatingActionButton(text = { Text("+") }, icon = { Icon(Icons.Filled.Add, "Nueva orden") }, onClick = { /* Historia 2.2: navegar a S-13 */ }) }` — FAB visible, onClick = Snackbar provisional "Alta de cliente — próximamente"
     - FAB permanece visible en empty state (UX-DR8)
-  - [ ] Verificar que `NavGraph.kt` ya llama a `ClientListScreen()` — no requiere cambios
+  - [x] Verificar que `NavGraph.kt` ya llama a `ClientListScreen()` — no requiere cambios
 
-- [ ] **T11: Verificación** (todos los ACs)
-  - [ ] `./gradlew :app:assembleDebug` — BUILD SUCCESSFUL
-  - [ ] `./gradlew :app:testDebugUnitTest` — 0 failures (agregar test para `ClientListViewModel`: verificar que `searchQuery` filtra correctamente la lista)
-  - [ ] Verificar en emulador/dispositivo: tab Clientes muestra empty state → insertar cliente en Room debug → aparece en lista → escribir en SearchBar → filtra en tiempo real
+- [x] **T11: Verificación** (todos los ACs)
+  - [x] `./gradlew :app:assembleDebug` — BUILD SUCCESSFUL
+  - [x] `./gradlew :app:testDebugUnitTest` — 0 failures (agregar test para `ClientListViewModel`: verificar que `searchQuery` filtra correctamente la lista)
+  - [x] Verificar en emulador/dispositivo: tab Clientes muestra empty state → insertar cliente en Room debug → aparece en lista → escribir en SearchBar → filtra en tiempo real
 
 ## Dev Notes
 
@@ -389,13 +389,39 @@ Los datos persisten en SQLite y aparecerán en S-11. No se perderán al reinicia
 ## Dev Agent Record
 
 ### Implementation Plan
-_[Agente: llenar al inicio]_
+
+Secuencia de implementación: T1 (dominio) → T2 (Room entities/DAO) → T3 (DB v2 + migración) → T4 (repositorio) → T5–T8 (componentes UI) → T9 (ViewModel) → T10 (Screen) → T11 (tests + build).
+
+Decisiones clave:
+- Agregado `material-icons-extended` (BOM-managed, sin versión explícita) para `Icons.Outlined.CloudDone` / `Icons.Outlined.Cloud` tal como especifica la historia
+- Agregado `kotlinx-coroutines-test 1.9.0` a test deps para testear StateFlow con `StandardTestDispatcher`
+- `SharingStarted.WhileSubscribed(5_000)` requiere un subscriber activo en tests → patrón `val job = launch { viewModel.clients.collect {} }; advanceUntilIdle()`
+- `Locale("es", "MX")` depreciado → reemplazado con `Locale.Builder().setLanguage("es").setRegion("MX").build()`
+- `SearchBar` M3 API usa `SearchBarDefaults.InputField` como slot (API 2026.06.00 Compose BOM)
+- `PullToRefreshBox` de `androidx.compose.material3.pulltorefresh` compiló correctamente con `@OptIn(ExperimentalMaterial3Api::class)`
+- `@OptIn(ExperimentalCoroutinesApi::class)` necesario en `ClientListViewModel` para `flatMapLatest`
 
 ### Debug Log
-_[Agente: registrar problemas encontrados y soluciones]_
+
+**Fallo 1 — tests `ClientListViewModelTest`:**
+- Tests `clients emits all clients when searchQuery is blank` y `clients filters by name when searchQuery is non-blank` fallaban con `AssertionError: expected: 2 but was: 0`
+- Causa: `SharingStarted.WhileSubscribed(5_000)` no inicia el upstream Flow sin subscriber activo; leer `.value` directamente retorna `initialValue = emptyList()`
+- Fix: Agregar `val job = launch { viewModel.clients.collect {} }; advanceUntilIdle()` antes de setear datos en el fake DAO para activar la suscripción
+
+**Warning — `Locale("es", "MX")` deprecated:**
+- Warning del compilador en `ClientCard.kt` línea 66
+- Fix: `Locale.Builder().setLanguage("es").setRegion("MX").build()`
 
 ### Completion Notes
-_[Agente: notas finales al completar]_
+
+Historia implementada completa. 24 tests pasan (0 fallos). BUILD SUCCESSFUL.
+
+- AC-1 ✅: S-11 muestra ClientCard con nombre, teléfono, saldo $0.00, SyncIcon; SearchBar M3; FilterChipRow (vacía v1); FAB "+"; PullToRefresh visual
+- AC-2 ✅: búsqueda en tiempo real via `flatMapLatest` sobre Room Flow; `searchByNameAsFlow` con LIKE en SQLite
+- AC-3 ✅: EmptyState con mensaje diferenciado (sin clientes vs sin resultados de búsqueda)
+- AC-4 ✅: Room Flow → respuesta inmediata del SQLite local (bien por debajo de 10s)
+- `CalculateClientBalanceUseCase` stub retorna `BigDecimal.ZERO`; marcado TODO para Historia 3.x
+- FAB "+" y tap en ClientCard muestran Snackbar provisional (Historia 2.2 y 2.3 respectivamente)
 
 ## File List
 
@@ -411,13 +437,28 @@ _[Agente: notas finales al completar]_
 - `android/app/src/main/java/com/sumitrack/android/ui/components/ClientCard.kt`
 - `android/app/src/main/java/com/sumitrack/android/ui/components/FilterChipRow.kt`
 - `android/app/src/main/java/com/sumitrack/android/ui/screens/clients/ClientListViewModel.kt`
+- `android/app/src/test/java/com/sumitrack/android/domain/models/SyncStatusTest.kt`
+- `android/app/src/test/java/com/sumitrack/android/ui/screens/clients/ClientListViewModelTest.kt`
 
 ### Archivos modificados (UPDATE)
-- `android/app/src/main/java/com/sumitrack/android/data/local/SumitrackDatabase.kt` — añadir ClientEntity, version = 2
-- `android/app/src/main/java/com/sumitrack/android/data/local/Migrations.kt` — añadir MIGRATION_1_2
-- `android/app/src/main/java/com/sumitrack/android/di/DatabaseModule.kt` — añadir provideClientDao
-- `android/app/src/main/java/com/sumitrack/android/ui/screens/clients/ClientListScreen.kt` — reemplazar placeholder
+- `android/app/src/main/java/com/sumitrack/android/data/local/SumitrackDatabase.kt` — ClientEntity añadida, version = 2
+- `android/app/src/main/java/com/sumitrack/android/data/local/Migrations.kt` — MIGRATION_1_2 implementada, ALL = arrayOf(MIGRATION_1_2)
+- `android/app/src/main/java/com/sumitrack/android/di/DatabaseModule.kt` — provideClientDao añadido
+- `android/app/src/main/java/com/sumitrack/android/ui/screens/clients/ClientListScreen.kt` — placeholder reemplazado con S-11 completa
+- `android/app/build.gradle.kts` — material-icons-extended + kotlinx-coroutines-test añadidos
+- `android/gradle/libs.versions.toml` — androidx-material-icons-extended + kotlinx-coroutines-test añadidos
 
 ## Change Log
 
-_[Agente: registrar cambios al completar]_
+- **2026-07-06** — Historia 2.1 implementada completa (Status: review)
+  - NEW: dominio — `SyncStatus`, `Client`, `CalculateClientBalanceUseCase` (stub)
+  - NEW: Room — `ClientEntity`, `ClientDao`, `Migrations.MIGRATION_1_2`
+  - UPDATE: `SumitrackDatabase` version 1 → 2 con `ClientEntity`
+  - UPDATE: `DatabaseModule` — `provideClientDao` añadido
+  - NEW: repositorio — `ClientRepository` con `flatMapLatest` sobre Room Flow
+  - NEW: componentes UI — `SyncIcon`, `EmptyState`, `ClientCard`, `FilterChipRow`
+  - NEW: `ClientListViewModel` con `searchQuery` StateFlow + `flatMapLatest`
+  - UPDATE: `ClientListScreen` — placeholder reemplazado con S-11 completa (SearchBar M3, FilterChipRow, LazyColumn, EmptyState, FAB, PullToRefreshBox)
+  - NEW: tests — `SyncStatusTest` (5 casos), `ClientListViewModelTest` (6 casos, FakeClientDao)
+  - UPDATE: deps — `material-icons-extended` (BOM), `kotlinx-coroutines-test 1.9.0`
+  - Build: 24 tests ✅, BUILD SUCCESSFUL
