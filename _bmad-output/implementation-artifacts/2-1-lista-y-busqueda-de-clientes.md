@@ -4,7 +4,7 @@ baseline_commit: 55e4f3d05f8dd2611676ad9b82054eeb592a5bf5
 
 # Story 2.1: Lista y Búsqueda de Clientes
 
-Status: review
+Status: done
 
 ## Story
 
@@ -138,6 +138,22 @@ para que pueda encontrar a cualquier cliente en segundos mientras estoy en campo
   - [x] `./gradlew :app:assembleDebug` — BUILD SUCCESSFUL
   - [x] `./gradlew :app:testDebugUnitTest` — 0 failures (agregar test para `ClientListViewModel`: verificar que `searchQuery` filtra correctamente la lista)
   - [x] Verificar en emulador/dispositivo: tab Clientes muestra empty state → insertar cliente en Room debug → aparece en lista → escribir en SearchBar → filtra en tiempo real
+
+### Review Findings
+
+- [x] [Review][Patch] Búsqueda no encuentra nombres acentuados con input sin acentos (ej. "lopez" no encuentra "López") — SQLite `LIKE` es case-insensitive solo para ASCII y no normaliza acentos, mientras `FakeClientDao` (test) usaba `String.contains(ignoreCase=true)` que sí normaliza. Decisión: normalizar acentos/mayúsculas en el propio `@Query` de `ClientDao` (LOWER + cadena de REPLACE para vocales acentuadas y ñ) comparado contra un valor pre-normalizado en Kotlin vía nuevo `SearchNormalizer`; se resuelve junto con el escape de comodines LIKE (mismo query). [`android/app/src/main/java/com/sumitrack/android/data/local/dao/ClientDao.kt`, `android/app/src/main/java/com/sumitrack/android/data/repositories/ClientRepository.kt`]
+- [x] [Review][Patch] Ícono trailing de "limpiar búsqueda" es un signo "+" (`Icons.Filled.Add`) en vez de un ícono de limpiar/cerrar [`android/app/src/main/java/com/sumitrack/android/ui/screens/clients/ClientListScreen.kt`]
+- [x] [Review][Patch] Ícono leading del SearchBar es `Icons.Outlined.People` en vez de un ícono de búsqueda, contradice `contentDescription = "Buscar"` y el ejemplo explícito de la historia [`android/app/src/main/java/com/sumitrack/android/ui/screens/clients/ClientListScreen.kt`]
+- [x] [Review][Patch] El SearchBar expandido no se colapsa al limpiar la búsqueda ni con back-press, dejando un overlay vacío visible [`android/app/src/main/java/com/sumitrack/android/ui/screens/clients/ClientListScreen.kt`]
+- [x] [Review][Patch] La búsqueda SQL no escapa comodines LIKE (`%`, `_`) del input del usuario — un nombre con `%` o `_` literal produce coincidencias impredecibles [`android/app/src/main/java/com/sumitrack/android/data/local/dao/ClientDao.kt:13`]
+- [x] [Review][Patch] Sin manejo de errores en el Flow de Room antes de `.stateIn(...)` — un fallo de lectura de BD mata el collector del StateFlow permanentemente para el resto del ciclo de vida de la pantalla [`android/app/src/main/java/com/sumitrack/android/ui/screens/clients/ClientListViewModel.kt`]
+- [x] [Review][Patch] `EmptyState` hardcodea `contentDescription = null`, perdiendo el `"Cargando..."` requerido por la historia (T6) para reutilización como skeleton accesible [`android/app/src/main/java/com/sumitrack/android/ui/components/EmptyState.kt`]
+- [x] [Review][Patch] `SearchBar` y `FilterChipRow` están dentro del `LazyColumn` como items normales en vez de permanecer fijos "en la parte superior" (AC-1) — se desplazan junto con la lista al hacer scroll [`android/app/src/main/java/com/sumitrack/android/ui/screens/clients/ClientListScreen.kt`]
+- [x] [Review][Patch] Default de `sync_status` inconsistente: la entidad Kotlin usa `"pending"` mientras la migración SQL usa `DEFAULT 'synced'` — el mismo caso ("campo no especificado") produce resultados opuestos según el camino de inserción [`android/app/src/main/java/com/sumitrack/android/data/local/entities/ClientEntity.kt`, `android/app/src/main/java/com/sumitrack/android/data/local/Migrations.kt`]
+- [x] [Review][Patch] Sin debounce en la búsqueda — cada tecla cancela y relanza una consulta Room vía `flatMapLatest` [`android/app/src/main/java/com/sumitrack/android/ui/screens/clients/ClientListViewModel.kt`]
+- [x] [Review][Patch] El saldo se formatea con `NumberFormat.getCurrencyInstance(...)` en vez del formato manual `BigDecimal.setScale(2, HALF_UP).toPlainString()` especificado explícitamente en T7 — se desvía del formato determinista pedido por la historia [`android/app/src/main/java/com/sumitrack/android/ui/components/ClientCard.kt`]
+- [x] [Review][Patch] El Change Log dice "6 casos" para `ClientListViewModelTest` pero el diff contiene 7 funciones `@Test` [`_bmad-output/implementation-artifacts/2-1-lista-y-busqueda-de-clientes.md`]
+- [x] [Review][Defer] `ClientRepository.upsertAll(clients: List<ClientEntity>)` expone el tipo de entidad Room a través de la API pública del repositorio, rompiendo la separación dominio/datos que sigue el resto del archivo — deferred, pre-existing (no tiene caller aún; resolver antes de que Historia 4.x conecte el motor de sync) [`android/app/src/main/java/com/sumitrack/android/data/repositories/ClientRepository.kt`]
 
 ## Dev Notes
 
@@ -459,6 +475,18 @@ Historia implementada completa. 24 tests pasan (0 fallos). BUILD SUCCESSFUL.
   - NEW: componentes UI — `SyncIcon`, `EmptyState`, `ClientCard`, `FilterChipRow`
   - NEW: `ClientListViewModel` con `searchQuery` StateFlow + `flatMapLatest`
   - UPDATE: `ClientListScreen` — placeholder reemplazado con S-11 completa (SearchBar M3, FilterChipRow, LazyColumn, EmptyState, FAB, PullToRefreshBox)
-  - NEW: tests — `SyncStatusTest` (5 casos), `ClientListViewModelTest` (6 casos, FakeClientDao)
+  - NEW: tests — `SyncStatusTest` (5 casos), `ClientListViewModelTest` (7 casos, FakeClientDao)
   - UPDATE: deps — `material-icons-extended` (BOM), `kotlinx-coroutines-test 1.9.0`
   - Build: 24 tests ✅, BUILD SUCCESSFUL
+
+- **2026-07-08** — Patches de code review aplicados (11 `patch`, 1 `defer`)
+  - NEW: `SearchNormalizer` (accent/case folding + escape de comodines LIKE) + `SearchNormalizerTest` (4 casos)
+  - UPDATE: `ClientDao.searchByNameAsFlow` — normaliza acentos/mayúsculas en SQL y compara contra query pre-normalizada; escapa `%`/`_`/`\` del input
+  - UPDATE: `ClientRepository.searchClients` — aplica `SearchNormalizer.toLikePattern` antes de consultar
+  - UPDATE: `ClientListViewModel` — `.debounce(200)` antes de `flatMapLatest`; `.catch { emit(emptyList()) }` antes de `.stateIn`
+  - UPDATE: `ClientListScreen` — ícono leading `Search` (antes `People`), ícono trailing `Clear` (antes `Add`), `BackHandler` + colapso de `searchActive` al limpiar, `SearchBar`/`FilterChipRow` movidos fuera del `LazyColumn` para permanecer fijos arriba
+  - UPDATE: `EmptyState` — nuevo parámetro `isLoading` que aplica `contentDescription = "Cargando..."` al contenedor (T6)
+  - UPDATE: `ClientCard.formatBalance` — vuelve al formato manual `BigDecimal.setScale(2, HALF_UP).toPlainString()` (T7), se quita `NumberFormat`/`Locale`
+  - UPDATE: `Migrations.MIGRATION_1_2` — `sync_status DEFAULT` de `'synced'` a `'pending'`, alineado con el default de `ClientEntity`
+  - NEW: test `clients matches accented name when search has no accents` en `ClientListViewModelTest` (8 casos totales)
+  - Build verificado con JDK de Android Studio (`Android Studio.app/Contents/jbr`): `assembleDebug` y `testDebugUnitTest` — **29 tests ✅ (0 fallos), BUILD SUCCESSFUL**

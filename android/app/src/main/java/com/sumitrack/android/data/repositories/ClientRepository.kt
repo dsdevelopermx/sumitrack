@@ -1,5 +1,6 @@
 package com.sumitrack.android.data.repositories
 
+import com.sumitrack.android.data.local.SearchNormalizer
 import com.sumitrack.android.data.local.dao.ClientDao
 import com.sumitrack.android.data.local.entities.ClientEntity
 import com.sumitrack.android.domain.models.Client
@@ -20,7 +21,8 @@ class ClientRepository @Inject constructor(
         clientDao.getAllAsFlow().map { entities -> entities.map { it.toDomain() } }
 
     fun searchClients(query: String): Flow<List<Client>> =
-        clientDao.searchByNameAsFlow(query).map { entities -> entities.map { it.toDomain() } }
+        clientDao.searchByNameAsFlow(SearchNormalizer.toLikePattern(query))
+            .map { entities -> entities.map { it.toDomain() } }
 
     suspend fun upsertAll(clients: List<ClientEntity>) = clientDao.upsertAll(clients)
 

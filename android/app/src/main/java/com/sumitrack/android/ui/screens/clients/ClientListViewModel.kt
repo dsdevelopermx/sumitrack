@@ -10,6 +10,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
@@ -24,6 +26,7 @@ class ClientListViewModel @Inject constructor(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val clients: StateFlow<List<Client>> = _searchQuery
+        .debounce(200)
         .flatMapLatest { query ->
             if (query.isBlank()) {
                 clientRepository.getAllClients()
@@ -31,6 +34,7 @@ class ClientListViewModel @Inject constructor(
                 clientRepository.searchClients(query)
             }
         }
+        .catch { emit(emptyList()) }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),

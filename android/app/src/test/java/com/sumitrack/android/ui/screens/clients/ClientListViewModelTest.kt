@@ -1,5 +1,6 @@
 package com.sumitrack.android.ui.screens.clients
 
+import com.sumitrack.android.data.local.SearchNormalizer
 import com.sumitrack.android.data.local.dao.ClientDao
 import com.sumitrack.android.data.local.entities.ClientEntity
 import com.sumitrack.android.data.repositories.ClientRepository
@@ -102,6 +103,19 @@ class ClientListViewModelTest {
         job.cancel()
     }
 
+    @Test
+    fun `clients matches accented name when search has no accents`() = runTest {
+        val job = launch { viewModel.clients.collect {} }
+        fakeDao.setClients(listOf(makeEntity("1", "Ana López")))
+        advanceUntilIdle()
+        viewModel.onSearchQueryChange("lopez")
+        advanceUntilIdle()
+        val result = viewModel.clients.value
+        assertEquals(1, result.size)
+        assertEquals("Ana López", result.first().name)
+        job.cancel()
+    }
+
     private fun makeEntity(id: String, name: String) = ClientEntity(
         id = id,
         fkTenant = "tenant-1",
@@ -123,8 +137,10 @@ class FakeClientDao : ClientDao {
 
     override fun getAllAsFlow(): Flow<List<ClientEntity>> = allFlow
 
-    override fun searchByNameAsFlow(query: String): Flow<List<ClientEntity>> =
-        allFlow.map { list -> list.filter { it.name.contains(query, ignoreCase = true) } }
+    override fun searchByNameAsFlow(normalizedQuery: String): Flow<List<ClientEntity>> =
+        allFlow.map { list ->
+            list.filter { SearchNormalizer.normalize(it.name).contains(normalizedQuery) }
+        }
 
     override suspend fun upsertAll(clients: List<ClientEntity>) {
         allFlow.value = clients

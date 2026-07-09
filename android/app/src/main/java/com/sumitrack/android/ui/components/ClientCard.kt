@@ -17,8 +17,6 @@ import androidx.compose.ui.unit.dp
 import com.sumitrack.android.domain.models.Client
 import com.sumitrack.android.domain.models.SyncStatus
 import java.math.RoundingMode
-import java.text.NumberFormat
-import java.util.Locale
 
 @Composable
 fun ClientCard(
@@ -62,7 +60,5 @@ fun ClientCard(
     }
 }
 
-private fun formatBalance(client: Client): String {
-    val formatter = NumberFormat.getCurrencyInstance(Locale.Builder().setLanguage("es").setRegion("MX").build())
-    return formatter.format(client.balance.setScale(2, RoundingMode.HALF_UP))
-}
+private fun formatBalance(client: Client): String =
+    "$${client.balance.setScale(2, RoundingMode.HALF_UP).toPlainString()}"

@@ -19,7 +19,7 @@ object Migrations {
                     notes TEXT,
                     created_at INTEGER NOT NULL,
                     updated_at INTEGER NOT NULL,
-                    sync_status TEXT NOT NULL DEFAULT 'synced'
+                    sync_status TEXT NOT NULL DEFAULT 'pending'
                 )
                 """.trimIndent()
             )

@@ -1,4 +1,8 @@
 
+## Deferred from: code review de 2-1-lista-y-busqueda-de-clientes (2026-07-08)
+
+- **`ClientRepository.upsertAll(clients: List<ClientEntity>)` expone el tipo de entidad Room en la API pública del repositorio** — rompe la separación dominio/datos que sigue el resto del archivo; sin caller aún, resolver antes de que Historia 4.x conecte el motor de sincronización. [ClientRepository.kt]
+
 ## Deferred from: code review de 1-4-inicio-de-sesion-sesion-persistente-y-cierre-de-sesion (2026-07-06)
 
 - **Token JWT en DataStore sin cifrar** — Considerar `EncryptedSharedPreferences` en Epic 4 cuando se implemente sincronización offline. [SessionManager.kt]
