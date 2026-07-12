@@ -8,6 +8,8 @@ import com.sumitrack.android.domain.models.SyncStatus
 import com.sumitrack.android.domain.usecases.CalculateClientBalanceUseCase
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.time.Instant
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -25,6 +27,58 @@ class ClientRepository @Inject constructor(
             .map { entities -> entities.map { it.toDomain() } }
 
     suspend fun upsertAll(clients: List<ClientEntity>) = clientDao.upsertAll(clients)
+
+    suspend fun createClient(
+        name: String,
+        phone: String,
+        rfc: String?,
+        address: String?,
+        notes: String?,
+        fkTenant: String,
+    ): String {
+        val now = Instant.now()
+        val entity = ClientEntity(
+            id = UUID.randomUUID().toString(),
+            fkTenant = fkTenant,
+            name = name,
+            phone = phone,
+            rfc = rfc,
+            address = address,
+            notes = notes,
+            createdAt = now,
+            updatedAt = now,
+            syncStatus = "pending",
+        )
+        clientDao.upsertAll(listOf(entity))
+        return entity.id
+    }
+
+    suspend fun updateClient(
+        id: String,
+        name: String,
+        phone: String,
+        rfc: String?,
+        address: String?,
+        notes: String?,
+    ): Boolean {
+        val existing = clientDao.getById(id) ?: return false
+        clientDao.upsertAll(
+            listOf(
+                existing.copy(
+                    name = name,
+                    phone = phone,
+                    rfc = rfc,
+                    address = address,
+                    notes = notes,
+                    updatedAt = Instant.now(),
+                    syncStatus = "pending",
+                )
+            )
+        )
+        return true
+    }
+
+    suspend fun getClientById(id: String): Client? = clientDao.getById(id)?.toDomain()
 
     private fun ClientEntity.toDomain() = Client(
         id = id,

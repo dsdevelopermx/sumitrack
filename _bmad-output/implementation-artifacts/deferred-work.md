@@ -1,4 +1,10 @@
 
+## Deferred from: code review de 2-2-alta-y-edicion-de-cliente (2026-07-11)
+
+- **Caché local de `clients` sin scope de tenant y sin purga en logout** — un segundo tenant que inicia sesión en el mismo dispositivo vería (y podría editar) clientes del tenant anterior; tensión con NFR-4. Preexistente desde Historia 2.1 (queries sin filtro de tenant) e Historia 1.4 (`clearToken` no purga Room). Requiere historia propia: queries con scope de tenant + purga de caché en logout. [ClientRepository.kt, SessionManager.kt]
+- **`Routes.ClientForm.createRoute` sin URL-encoding del `clientId`** — inofensivo hoy (solo se pasan UUIDs), pero la función acepta cualquier `String?`; futuros llamadores (edición desde Historia 2.3) podrían pasar caracteres reservados de URI. [Routes.kt]
+- **Sin diálogo de confirmación al salir de S-13 con cambios sin guardar** — no lo exige ningún AC de esta historia; el patrón de confirmación de `EXPERIENCE.md` está acotado al flujo de nueva orden (S-04+). [ClientFormScreen.kt]
+
 ## Deferred from: code review de 2-1-lista-y-busqueda-de-clientes (2026-07-08)
 
 - **`ClientRepository.upsertAll(clients: List<ClientEntity>)` expone el tipo de entidad Room en la API pública del repositorio** — rompe la separación dominio/datos que sigue el resto del archivo; sin caller aún, resolver antes de que Historia 4.x conecte el motor de sincronización. [ClientRepository.kt]

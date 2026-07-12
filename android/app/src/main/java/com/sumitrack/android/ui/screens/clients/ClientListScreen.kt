@@ -45,6 +45,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun ClientListScreen(
     modifier: Modifier = Modifier,
+    onAddClientClick: () -> Unit = {},
     viewModel: ClientListViewModel = hiltViewModel(),
 ) {
     val clients by viewModel.clients.collectAsStateWithLifecycle()
@@ -63,11 +64,7 @@ fun ClientListScreen(
             ExtendedFloatingActionButton(
                 text = { Text("+") },
                 icon = { Icon(Icons.Filled.Add, contentDescription = "Agregar cliente") },
-                onClick = {
-                    scope.launch {
-                        snackbarHostState.showSnackbar("Alta de cliente — disponible próximamente")
-                    }
-                },
+                onClick = onAddClientClick,
             )
         },
     ) { innerPadding ->

@@ -143,7 +143,9 @@ class FakeClientDao : ClientDao {
         }
 
     override suspend fun upsertAll(clients: List<ClientEntity>) {
-        allFlow.value = clients
+        val byId = allFlow.value.associateBy { it.id }.toMutableMap()
+        clients.forEach { byId[it.id] = it }
+        allFlow.value = byId.values.toList()
     }
 
     override suspend fun getById(id: String): ClientEntity? =
