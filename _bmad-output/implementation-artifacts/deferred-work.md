@@ -1,4 +1,11 @@
 
+## Deferred from: code review de 2-4-catalogo-de-productos-y-variantes (2026-07-19)
+
+- **`.catch { emit(emptyList()) }` en `ProductListViewModel` traga errores de Flow/DB silenciosamente** — indistinguible de un catálogo genuinamente vacío. Patrón preexistente idéntico en `ClientListViewModel` desde Historia 2.1, no introducido por esta historia. [ProductListViewModel.kt]
+- **`ProductListScreen` sin estado de carga inicial** — puede mostrar el empty state brevemente antes de la primera emisión del `Flow`. Mismo gap preexistente en `ClientListScreen` desde Historia 2.1. [ProductListScreen.kt]
+- **Reemplazo total de variantes en cada edición de producto genera churn de `sync_status`** — `ProductRepository.updateProduct` borra y reinserta todas las variantes en vez de hacer diffing; una variante no tocada por el usuario igual recibe `id`/`created_at` nuevos y `sync_status = pending`. Sin costo hoy (no existe motor de sync). Revisar cuando Epic 4 implemente sync real — evaluar si el tráfico generado justifica un diffing por variante. [ProductRepository.kt]
+- **Sin índice en `products`/`product_variants` para `fk_product`/`fk_tenant`** — consistente con la falta de índices ya existente en el resto del esquema (`clients.name`, `sales.fk_client`/`status`/`created_at`, sin índice desde Historias 2.1/2.3). Candidato a una pasada de indexación dedicada cuando el volumen de datos importe. [Migrations.kt]
+
 ## Deferred from: code review de 2-3-perfil-de-cliente-con-saldo-y-ordenes-abiertas (2026-07-15)
 
 - **`runCatching` traga `CancellationException` sin relanzarla** — patrón preexistente desde `ClientFormViewModel.kt` (Historia 2.2), replicado en `ClientProfileViewModel.kt`. Rompe la cancelación cooperativa si la pantalla se cierra a medio cargar. Requiere una pasada dedicada por todo el codebase (ya son 2+ ViewModels con el mismo patrón). [ClientFormViewModel.kt, ClientProfileViewModel.kt]

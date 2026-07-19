@@ -11,6 +11,8 @@ import com.sumitrack.android.ui.screens.clients.ClientFormScreen
 import com.sumitrack.android.ui.screens.clients.ClientListScreen
 import com.sumitrack.android.ui.screens.clients.ClientProfileScreen
 import com.sumitrack.android.ui.screens.orders.OrderListScreen
+import com.sumitrack.android.ui.screens.products.ProductFormScreen
+import com.sumitrack.android.ui.screens.products.ProductListScreen
 import com.sumitrack.android.ui.screens.settings.SettingsScreen
 
 @Composable
@@ -31,7 +33,13 @@ fun NavGraph(navController: NavHostController, modifier: Modifier = Modifier) {
                 },
             )
         }
-        composable(Routes.Settings.route) { SettingsScreen() }
+        composable(Routes.Settings.route) {
+            SettingsScreen(
+                onCatalogClick = {
+                    navController.navigate(Routes.ProductList.route) { launchSingleTop = true }
+                },
+            )
+        }
         composable(
             route = Routes.ClientForm.route,
             arguments = listOf(navArgument("clientId") { type = NavType.StringType; nullable = true }),
@@ -50,6 +58,26 @@ fun NavGraph(navController: NavHostController, modifier: Modifier = Modifier) {
                 onEditClick = { clientId ->
                     navController.navigate(Routes.ClientForm.createRoute(clientId))
                 },
+            )
+        }
+        composable(Routes.ProductList.route) {
+            ProductListScreen(
+                onBackClick = { navController.popBackStack() },
+                onAddProductClick = {
+                    navController.navigate(Routes.ProductForm.createRoute()) { launchSingleTop = true }
+                },
+                onProductClick = { productId ->
+                    navController.navigate(Routes.ProductForm.createRoute(productId)) { launchSingleTop = true }
+                },
+            )
+        }
+        composable(
+            route = Routes.ProductForm.route,
+            arguments = listOf(navArgument("productId") { type = NavType.StringType; nullable = true }),
+        ) {
+            ProductFormScreen(
+                onSaved = { navController.popBackStack() },
+                onCancel = { navController.popBackStack() },
             )
         }
     }
