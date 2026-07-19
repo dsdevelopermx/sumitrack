@@ -78,8 +78,12 @@ class ClientRepository @Inject constructor(
         return true
     }
 
-    suspend fun getClientById(id: String): Client? = clientDao.getById(id)?.toDomain()
+    suspend fun getClientById(id: String): Client? = clientDao.getById(id)?.toDomainWithBalance()
 
+    // Saldo real omitido a propósito: usada por getAllClients()/searchClients(), que se re-emiten
+    // en cada cambio de Room. Calcular el saldo aquí dispararía una consulta a `sales` por cliente
+    // en cada emisión (N+1). Ver toDomainWithBalance() para el perfil de cliente (S-12), que sí
+    // necesita el saldo real y se carga una sola vez por navegación.
     private fun ClientEntity.toDomain() = Client(
         id = id,
         fkTenant = fkTenant,
@@ -91,6 +95,8 @@ class ClientRepository @Inject constructor(
         createdAt = createdAt,
         updatedAt = updatedAt,
         syncStatus = SyncStatus.fromString(syncStatus),
-        balance = calculateClientBalance(id),
     )
+
+    private suspend fun ClientEntity.toDomainWithBalance() =
+        toDomain().copy(balance = calculateClientBalance(id, fkTenant))
 }

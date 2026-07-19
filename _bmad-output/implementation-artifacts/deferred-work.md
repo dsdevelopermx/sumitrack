@@ -1,4 +1,12 @@
 
+## Deferred from: code review de 2-3-perfil-de-cliente-con-saldo-y-ordenes-abiertas (2026-07-15)
+
+- **`runCatching` traga `CancellationException` sin relanzarla** — patrón preexistente desde `ClientFormViewModel.kt` (Historia 2.2), replicado en `ClientProfileViewModel.kt`. Rompe la cancelación cooperativa si la pantalla se cierra a medio cargar. Requiere una pasada dedicada por todo el codebase (ya son 2+ ViewModels con el mismo patrón). [ClientFormViewModel.kt, ClientProfileViewModel.kt]
+- **`client.balance` y `openSales` son dos lecturas no transaccionales de `sales`** — podrían divergir si el estatus de una venta cambia entre ambas llamadas. Inalcanzable hoy: ningún flujo de la app puede escribir en `sales` todavía. Revisar cuando Epic 3 agregue mutación de ventas. [ClientProfileViewModel.kt]
+- **Comparación `status IN ('pending','partial')` en `SaleDao` sensible a mayúsculas/minúsculas** — depende de una convención no forzada por código (todo estatus persistido en minúsculas, igual que `sync_status`). Inalcanzable hoy: no existe flujo de escritura a `sales`. Revisar cuando Epic 3 escriba filas reales. [SaleDao.kt]
+- **Sin piso en cero ni manejo de montos negativos en `CalculateClientBalanceUseCase`/`formatAmount`** — hoy inalcanzable porque ningún código produce un `total` negativo; relevante cuando Epic 3 construya el flujo de creación de ventas con su propia validación. [CalculateClientBalanceUseCase.kt, ClientProfileScreen.kt]
+- **Sin índice en la tabla `sales` para `fk_client`/`status`/`created_at`** — consistente con la falta de índices ya existente en el resto del esquema (p. ej. `clients.name`, sin índice desde Historia 2.1). Candidato a una pasada de indexación dedicada cuando el volumen de datos importe (Epic 3/4). [Migrations.kt]
+
 ## Deferred from: code review de 2-2-alta-y-edicion-de-cliente (2026-07-11)
 
 - **Caché local de `clients` sin scope de tenant y sin purga en logout** — un segundo tenant que inicia sesión en el mismo dispositivo vería (y podría editar) clientes del tenant anterior; tensión con NFR-4. Preexistente desde Historia 2.1 (queries sin filtro de tenant) e Historia 1.4 (`clearToken` no purga Room). Requiere historia propia: queries con scope de tenant + purga de caché en logout. [ClientRepository.kt, SessionManager.kt]

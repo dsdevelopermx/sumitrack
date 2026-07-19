@@ -2,6 +2,7 @@ package com.sumitrack.android.ui.screens.clients
 
 import androidx.lifecycle.SavedStateHandle
 import com.sumitrack.android.data.repositories.ClientRepository
+import com.sumitrack.android.data.repositories.SaleRepository
 import com.sumitrack.android.domain.usecases.CalculateClientBalanceUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -30,7 +31,7 @@ class ClientFormViewModelTest {
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         fakeDao = FakeClientDao()
-        repository = ClientRepository(fakeDao, CalculateClientBalanceUseCase())
+        repository = ClientRepository(fakeDao, CalculateClientBalanceUseCase(SaleRepository(FakeSaleDao())))
     }
 
     @After

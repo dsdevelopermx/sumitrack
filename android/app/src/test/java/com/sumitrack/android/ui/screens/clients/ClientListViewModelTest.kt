@@ -4,6 +4,7 @@ import com.sumitrack.android.data.local.SearchNormalizer
 import com.sumitrack.android.data.local.dao.ClientDao
 import com.sumitrack.android.data.local.entities.ClientEntity
 import com.sumitrack.android.data.repositories.ClientRepository
+import com.sumitrack.android.data.repositories.SaleRepository
 import com.sumitrack.android.domain.models.Client
 import com.sumitrack.android.domain.usecases.CalculateClientBalanceUseCase
 import kotlinx.coroutines.Dispatchers
@@ -34,7 +35,7 @@ class ClientListViewModelTest {
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         fakeDao = FakeClientDao()
-        val repo = ClientRepository(fakeDao, CalculateClientBalanceUseCase())
+        val repo = ClientRepository(fakeDao, CalculateClientBalanceUseCase(SaleRepository(FakeSaleDao())))
         viewModel = ClientListViewModel(repo)
     }
 

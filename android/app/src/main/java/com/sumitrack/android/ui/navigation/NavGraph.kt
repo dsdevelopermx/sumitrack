@@ -9,6 +9,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.sumitrack.android.ui.screens.clients.ClientFormScreen
 import com.sumitrack.android.ui.screens.clients.ClientListScreen
+import com.sumitrack.android.ui.screens.clients.ClientProfileScreen
 import com.sumitrack.android.ui.screens.orders.OrderListScreen
 import com.sumitrack.android.ui.screens.settings.SettingsScreen
 
@@ -25,6 +26,9 @@ fun NavGraph(navController: NavHostController, modifier: Modifier = Modifier) {
                 onAddClientClick = {
                     navController.navigate(Routes.ClientForm.createRoute()) { launchSingleTop = true }
                 },
+                onClientClick = { clientId ->
+                    navController.navigate(Routes.ClientProfile.createRoute(clientId)) { launchSingleTop = true }
+                },
             )
         }
         composable(Routes.Settings.route) { SettingsScreen() }
@@ -35,6 +39,17 @@ fun NavGraph(navController: NavHostController, modifier: Modifier = Modifier) {
             ClientFormScreen(
                 onSaved = { navController.popBackStack() },
                 onCancel = { navController.popBackStack() },
+            )
+        }
+        composable(
+            route = Routes.ClientProfile.route,
+            arguments = listOf(navArgument("clientId") { type = NavType.StringType }),
+        ) {
+            ClientProfileScreen(
+                onBackClick = { navController.popBackStack() },
+                onEditClick = { clientId ->
+                    navController.navigate(Routes.ClientForm.createRoute(clientId))
+                },
             )
         }
     }

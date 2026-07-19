@@ -5,6 +5,7 @@ import androidx.room.Room
 import com.sumitrack.android.data.local.Migrations
 import com.sumitrack.android.data.local.SumitrackDatabase
 import com.sumitrack.android.data.local.dao.ClientDao
+import com.sumitrack.android.data.local.dao.SaleDao
 import com.sumitrack.android.data.local.dao.SettingsDao
 import dagger.Module
 import dagger.Provides
@@ -31,4 +32,8 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideClientDao(db: SumitrackDatabase): ClientDao = db.clientDao()
+
+    @Provides
+    @Singleton
+    fun provideSaleDao(db: SumitrackDatabase): SaleDao = db.saleDao()
 }

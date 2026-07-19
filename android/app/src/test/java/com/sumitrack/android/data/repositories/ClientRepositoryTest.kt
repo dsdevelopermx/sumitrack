@@ -2,6 +2,7 @@ package com.sumitrack.android.data.repositories
 
 import com.sumitrack.android.domain.usecases.CalculateClientBalanceUseCase
 import com.sumitrack.android.ui.screens.clients.FakeClientDao
+import com.sumitrack.android.ui.screens.clients.FakeSaleDao
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -19,7 +20,7 @@ class ClientRepositoryTest {
     @Before
     fun setUp() {
         fakeDao = FakeClientDao()
-        repository = ClientRepository(fakeDao, CalculateClientBalanceUseCase())
+        repository = ClientRepository(fakeDao, CalculateClientBalanceUseCase(SaleRepository(FakeSaleDao())))
     }
 
     @Test

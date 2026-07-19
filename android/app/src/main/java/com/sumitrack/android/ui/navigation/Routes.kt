@@ -10,4 +10,8 @@ sealed class Routes(val route: String) {
         fun createRoute(clientId: String? = null): String =
             if (clientId != null) "client_form?clientId=$clientId" else "client_form"
     }
+
+    object ClientProfile : Routes("client_profile/{clientId}") {
+        fun createRoute(clientId: String): String = "client_profile/$clientId"
+    }
 }

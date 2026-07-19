@@ -30,7 +30,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -39,13 +38,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sumitrack.android.ui.components.ClientCard
 import com.sumitrack.android.ui.components.EmptyState
 import com.sumitrack.android.ui.components.FilterChipRow
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ClientListScreen(
     modifier: Modifier = Modifier,
     onAddClientClick: () -> Unit = {},
+    onClientClick: (String) -> Unit = {},
     viewModel: ClientListViewModel = hiltViewModel(),
 ) {
     val clients by viewModel.clients.collectAsStateWithLifecycle()
@@ -53,7 +52,6 @@ fun ClientListScreen(
 
     var searchActive by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
 
     BackHandler(enabled = searchActive) { searchActive = false }
 
@@ -146,13 +144,7 @@ fun ClientListScreen(
                         items(clients, key = { it.id }) { client ->
                             ClientCard(
                                 client = client,
-                                onClick = {
-                                    scope.launch {
-                                        snackbarHostState.showSnackbar(
-                                            "Perfil de cliente — disponible próximamente"
-                                        )
-                                    }
-                                },
+                                onClick = { onClientClick(client.id) },
                                 modifier = Modifier.padding(horizontal = 16.dp),
                             )
                         }
