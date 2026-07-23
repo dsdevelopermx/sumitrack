@@ -1,4 +1,11 @@
 
+## Deferred from: code review de 3-1-historial-de-ordenes (2026-07-19)
+
+- **`.catch { emit(emptyList()) }` en `OrderListViewModel` traga errores y puede dejar el `StateFlow` congelado tras un error real** — por semántica de `Flow.catch` + `stateIn(WhileSubscribed)`, si el flow interno lanza una excepción, `catch` emite el fallback y el flow completa; el `StateFlow` no vuelve a actualizarse hasta que todos los colectores se desconecten y reconecten (ej. background/foreground de la app). Mismo patrón exacto ya usado en `ClientListViewModel` (Historia 2.1) y `ProductListViewModel` (Historia 2.4) — requiere una pasada dedicada por las 3 ViewModels (ya son 3 con el mismo patrón, mismo criterio que el deferred de `CancellationException` de Historia 2.3). [OrderListViewModel.kt, ClientListViewModel.kt, ProductListViewModel.kt]
+- **`BackHandler` en `OrderListScreen`/`ClientListScreen` colapsa la búsqueda sin llamar `onSearchClear()`, y el contenido expandido del `SearchBar` es una lambda vacía** — patrón idéntico en ambas pantallas desde Historia 2.1. Verificar en dispositivo real si el overlay expandido oculta la lista subyacente (sospecha no confirmable sin infraestructura de test de Composables); si se confirma, corregir en ambas pantallas a la vez. [OrderListScreen.kt, ClientListScreen.kt]
+- **`getOrdersForTenantAsFlow` sin `LIMIT`/paginación** — se re-ejecuta en cada tecleo (tras debounce) con un `JOIN` + cadena de `REPLACE()` anidados y un `LIKE` con comodín inicial no indexable. Sin costo real hoy por volumen bajo; mismo criterio que los índices ya diferidos de `sales`/`clients`/`products`. [SaleDao.kt]
+- **`FakeSaleDao.getOrdersForTenantAsFlow` no desescapa el `normalizedQuery` antes de comparar** — diverge del comportamiento real de `LIKE ... ESCAPE '\'` si un nombre de cliente contuviera literalmente `%` o `_`. Gap de fidelidad del fake, sin impacto en producción. [FakeSaleDao.kt]
+
 ## Deferred from: code review de 2-4-catalogo-de-productos-y-variantes (2026-07-19)
 
 - **`.catch { emit(emptyList()) }` en `ProductListViewModel` traga errores de Flow/DB silenciosamente** — indistinguible de un catálogo genuinamente vacío. Patrón preexistente idéntico en `ClientListViewModel` desde Historia 2.1, no introducido por esta historia. [ProductListViewModel.kt]
