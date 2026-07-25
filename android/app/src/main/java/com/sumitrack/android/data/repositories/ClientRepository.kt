@@ -2,8 +2,10 @@ package com.sumitrack.android.data.repositories
 
 import com.sumitrack.android.data.local.SearchNormalizer
 import com.sumitrack.android.data.local.dao.ClientDao
+import com.sumitrack.android.data.local.dao.ClientSearchRow
 import com.sumitrack.android.data.local.entities.ClientEntity
 import com.sumitrack.android.domain.models.Client
+import com.sumitrack.android.domain.models.ClientSearchResult
 import com.sumitrack.android.domain.models.SyncStatus
 import com.sumitrack.android.domain.usecases.CalculateClientBalanceUseCase
 import kotlinx.coroutines.flow.Flow
@@ -25,6 +27,10 @@ class ClientRepository @Inject constructor(
     fun searchClients(query: String): Flow<List<Client>> =
         clientDao.searchByNameAsFlow(SearchNormalizer.toLikePattern(query))
             .map { entities -> entities.map { it.toDomain() } }
+
+    fun searchClientsWithBalance(tenantId: String, query: String): Flow<List<ClientSearchResult>> =
+        clientDao.searchWithBalanceAsFlow(tenantId, SearchNormalizer.toLikePattern(query.trim()))
+            .map { rows -> rows.map { it.toDomain() } }
 
     suspend fun upsertAll(clients: List<ClientEntity>) = clientDao.upsertAll(clients)
 
@@ -99,4 +105,6 @@ class ClientRepository @Inject constructor(
 
     private suspend fun ClientEntity.toDomainWithBalance() =
         toDomain().copy(balance = calculateClientBalance(id, fkTenant))
+
+    private fun ClientSearchRow.toDomain() = ClientSearchResult(id = id, name = name, phone = phone, balance = balance)
 }

@@ -53,6 +53,7 @@ private val STATUS_CHIPS = listOf(
 @Composable
 fun OrderListScreen(
     modifier: Modifier = Modifier,
+    onNewOrderClick: () -> Unit = {},
     viewModel: OrderListViewModel = hiltViewModel(),
 ) {
     val orders by viewModel.orders.collectAsStateWithLifecycle()
@@ -72,9 +73,7 @@ fun OrderListScreen(
             ExtendedFloatingActionButton(
                 text = { Text("+") },
                 icon = { Icon(Icons.Filled.Add, contentDescription = "Nueva Orden") },
-                onClick = {
-                    scope.launch { snackbarHostState.showSnackbar("Nueva orden — disponible próximamente") }
-                },
+                onClick = onNewOrderClick,
             )
         },
     ) { innerPadding ->

@@ -2,15 +2,19 @@ package com.sumitrack.android.ui.screens.clients
 
 import com.sumitrack.android.data.local.SearchNormalizer
 import com.sumitrack.android.data.local.dao.ClientDao
+import com.sumitrack.android.data.local.dao.ClientSearchRow
 import com.sumitrack.android.data.local.entities.ClientEntity
+import com.sumitrack.android.data.local.entities.SaleEntity
 import com.sumitrack.android.data.repositories.ClientRepository
 import com.sumitrack.android.data.repositories.SaleRepository
 import com.sumitrack.android.domain.models.Client
 import com.sumitrack.android.domain.usecases.CalculateClientBalanceUseCase
+import java.math.BigDecimal
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -131,9 +135,14 @@ class ClientListViewModelTest {
 class FakeClientDao : ClientDao {
 
     private val allFlow = MutableStateFlow<List<ClientEntity>>(emptyList())
+    private val salesFlow = MutableStateFlow<List<SaleEntity>>(emptyList())
 
     fun setClients(clients: List<ClientEntity>) {
         allFlow.value = clients
+    }
+
+    fun setSales(sales: List<SaleEntity>) {
+        salesFlow.value = sales
     }
 
     override fun getAllAsFlow(): Flow<List<ClientEntity>> = allFlow
@@ -142,6 +151,20 @@ class FakeClientDao : ClientDao {
         allFlow.map { list ->
             list.filter { SearchNormalizer.normalize(it.name).contains(normalizedQuery) }
         }
+
+    override fun searchWithBalanceAsFlow(tenantId: String, normalizedQuery: String): Flow<List<ClientSearchRow>> =
+        combine(allFlow, salesFlow) { clients, sales -> clients to sales }
+            .map { (clients, sales) ->
+                clients
+                    .filter { it.fkTenant == tenantId }
+                    .filter { normalizedQuery.isBlank() || SearchNormalizer.normalize(it.name).contains(normalizedQuery) }
+                    .map { client ->
+                        val balance = sales
+                            .filter { it.fkClient == client.id && it.fkTenant == tenantId && it.status in setOf("pending", "partial") }
+                            .fold(BigDecimal.ZERO) { acc, sale -> acc + sale.total }
+                        ClientSearchRow(id = client.id, name = client.name, phone = client.phone, balance = balance)
+                    }
+            }
 
     override suspend fun upsertAll(clients: List<ClientEntity>) {
         val byId = allFlow.value.associateBy { it.id }.toMutableMap()

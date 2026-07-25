@@ -21,4 +21,7 @@ class FakeProductVariantDao : ProductVariantDao {
             .filter { it.fkProduct == productId && it.fkTenant == tenantId }
             .forEach { variants.remove(it.id) }
     }
+
+    override suspend fun getProductIdsWithVariants(tenantId: String): List<String> =
+        variants.values.filter { it.fkTenant == tenantId }.map { it.fkProduct }.distinct()
 }

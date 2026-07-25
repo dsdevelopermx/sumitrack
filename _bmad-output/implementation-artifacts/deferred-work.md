@@ -1,4 +1,10 @@
 
+## Deferred from: code review de 3-2-seleccion-de-cliente-e-items-en-nueva-orden (2026-07-19)
+
+- **Carrito en memoria de `ItemListViewModel` sin respaldo de `SavedStateHandle`** — una muerte de proceso a medio armar una orden en campo (escenario que la propia historia usa para justificar el flujo) pierde el carrito sin aviso. Persistir una lista anidada de `OrderDraftItem` (con `BigDecimal`, entidades de dominio) de forma Bundle-safe es una expansión de alcance sustancial, no exigida por ningún AC. [ItemListViewModel.kt]
+- **`runCatching{}.getOrDefault(...)` en `ItemListViewModel` traga errores sin ningún indicio al usuario** (carga inicial de `idsWithVariants`, `getVariantsForProduct` por toque) — mismo patrón de manejo de errores silencioso ya diferido en Historia 2.3 (`CancellationException`); requiere una pasada dedicada por todo el codebase. [ItemListViewModel.kt]
+- **`ItemListViewModel` no reacciona a cambios de `tenantId` después de la carga inicial** (`tenantId.first()` en vez de un patrón reactivo como `flatMapLatest`, a diferencia de `ClientSelectViewModel`) — impacto práctico bajo, el tenant no cambia sin cerrar sesión. [ItemListViewModel.kt]
+
 ## Deferred from: code review de 3-1-historial-de-ordenes (2026-07-19)
 
 - **`.catch { emit(emptyList()) }` en `OrderListViewModel` traga errores y puede dejar el `StateFlow` congelado tras un error real** — por semántica de `Flow.catch` + `stateIn(WhileSubscribed)`, si el flow interno lanza una excepción, `catch` emite el fallback y el flow completa; el `StateFlow` no vuelve a actualizarse hasta que todos los colectores se desconecten y reconecten (ej. background/foreground de la app). Mismo patrón exacto ya usado en `ClientListViewModel` (Historia 2.1) y `ProductListViewModel` (Historia 2.4) — requiere una pasada dedicada por las 3 ViewModels (ya son 3 con el mismo patrón, mismo criterio que el deferred de `CancellationException` de Historia 2.3). [OrderListViewModel.kt, ClientListViewModel.kt, ProductListViewModel.kt]

@@ -203,4 +203,50 @@ class ProductRepositoryTest {
 
         assertEquals(emptyList<Product>(), all)
     }
+
+    @Test
+    fun `getActiveProducts excludes inactive products`() = runTest {
+        val activeId = repository.createProduct("Activo", BigDecimal("1.00"), BigDecimal.ZERO, emptyList(), "tenant-1")
+        val inactiveId = repository.createProduct("Inactivo", BigDecimal("1.00"), BigDecimal.ZERO, emptyList(), "tenant-1")
+        repository.updateProduct(inactiveId, "tenant-1", "Inactivo", BigDecimal("1.00"), BigDecimal.ZERO, isActive = false, variantNames = emptyList())
+
+        val active = mutableListOf<Product>()
+        val job = launch { repository.getActiveProducts("tenant-1").collect { active.addAll(it) } }
+        advanceUntilIdle()
+        job.cancel()
+
+        assertEquals(listOf(activeId), active.map { it.id })
+    }
+
+    @Test
+    fun `getActiveProducts excludes products from a different tenant`() = runTest {
+        repository.createProduct("De otro tenant", BigDecimal("1.00"), BigDecimal.ZERO, emptyList(), "tenant-2")
+
+        val active = mutableListOf<Product>()
+        val job = launch { repository.getActiveProducts("tenant-1").collect { active.addAll(it) } }
+        advanceUntilIdle()
+        job.cancel()
+
+        assertEquals(emptyList<Product>(), active)
+    }
+
+    @Test
+    fun `getProductIdsWithVariants includes only products with at least one variant`() = runTest {
+        val withVariants = repository.createProduct("Refresco", BigDecimal("15.50"), BigDecimal.ZERO, listOf("600ml"), "tenant-1")
+        val withoutVariants = repository.createProduct("Agua", BigDecimal("10.00"), BigDecimal.ZERO, emptyList(), "tenant-1")
+
+        val ids = repository.getProductIdsWithVariants("tenant-1")
+
+        assertTrue(withVariants in ids)
+        assertFalse(withoutVariants in ids)
+    }
+
+    @Test
+    fun `getProductIdsWithVariants excludes a different tenant`() = runTest {
+        repository.createProduct("Refresco", BigDecimal("15.50"), BigDecimal.ZERO, listOf("600ml"), "tenant-2")
+
+        val ids = repository.getProductIdsWithVariants("tenant-1")
+
+        assertEquals(emptySet<String>(), ids)
+    }
 }

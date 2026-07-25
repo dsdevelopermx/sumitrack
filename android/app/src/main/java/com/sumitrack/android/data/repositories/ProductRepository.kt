@@ -26,11 +26,17 @@ class ProductRepository @Inject constructor(
     fun getAllProducts(tenantId: String): Flow<List<Product>> =
         productDao.getAllAsFlow(tenantId).map { entities -> entities.map { it.toDomain() } }
 
+    fun getActiveProducts(tenantId: String): Flow<List<Product>> =
+        productDao.getActiveAsFlow(tenantId).map { entities -> entities.map { it.toDomain() } }
+
     suspend fun getProductById(id: String, tenantId: String): Product? =
         productDao.getById(id, tenantId)?.toDomain()
 
     suspend fun getVariantsForProduct(productId: String, tenantId: String): List<ProductVariant> =
         productVariantDao.getForProduct(productId, tenantId).map { it.toDomain() }
+
+    suspend fun getProductIdsWithVariants(tenantId: String): Set<String> =
+        productVariantDao.getProductIdsWithVariants(tenantId).toSet()
 
     suspend fun createProduct(
         name: String,

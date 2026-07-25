@@ -12,6 +12,9 @@ interface ProductDao {
     @Query("SELECT * FROM products WHERE fk_tenant = :tenantId ORDER BY name ASC")
     fun getAllAsFlow(tenantId: String): Flow<List<ProductEntity>>
 
+    @Query("SELECT * FROM products WHERE fk_tenant = :tenantId AND is_active = 1 ORDER BY name ASC")
+    fun getActiveAsFlow(tenantId: String): Flow<List<ProductEntity>>
+
     @Query("SELECT * FROM products WHERE id = :id AND fk_tenant = :tenantId LIMIT 1")
     suspend fun getById(id: String, tenantId: String): ProductEntity?
 

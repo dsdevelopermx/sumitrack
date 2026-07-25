@@ -136,7 +136,7 @@ class ClientFormViewModelTest {
     @Test
     fun `alta mode creates client with resolved tenantId and emits navEvent`() = runTest {
         val vm = viewModel(tenantId = "tenant-1")
-        val navEvents = mutableListOf<Unit>()
+        val navEvents = mutableListOf<String>()
         val job = launch { vm.navEvent.collect { navEvents.add(it) } }
 
         vm.onNameChange("Ana López")
@@ -145,6 +145,8 @@ class ClientFormViewModelTest {
         advanceUntilIdle()
 
         assertEquals(1, navEvents.size)
+        val createdId = navEvents.first()
+        assertEquals("Ana López", repository.getClientById(createdId)?.name)
         job.cancel()
     }
 
@@ -184,7 +186,7 @@ class ClientFormViewModelTest {
         advanceUntilIdle()
         assertEquals("No pudimos cargar los datos del cliente.", vm.uiState.value.errorMessage)
 
-        val navEvents = mutableListOf<Unit>()
+        val navEvents = mutableListOf<String>()
         val job = launch { vm.navEvent.collect { navEvents.add(it) } }
 
         vm.onNameChange("Ana López")

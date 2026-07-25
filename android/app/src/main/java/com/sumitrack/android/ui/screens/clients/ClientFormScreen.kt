@@ -40,7 +40,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ClientFormScreen(
-    onSaved: () -> Unit,
+    onSaved: (clientId: String) -> Unit,
     onCancel: () -> Unit,
     viewModel: ClientFormViewModel = hiltViewModel(),
 ) {
@@ -48,7 +48,7 @@ fun ClientFormScreen(
     val focusManager = LocalFocusManager.current
 
     LaunchedEffect(Unit) {
-        viewModel.navEvent.collect { onSaved() }
+        viewModel.navEvent.collect { id -> onSaved(id) }
     }
 
     // Evita que back (gesto o botón físico) cancele un guardado en curso a medio hacer.

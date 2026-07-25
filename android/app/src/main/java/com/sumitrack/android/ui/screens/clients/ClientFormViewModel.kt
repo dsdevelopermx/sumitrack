@@ -47,8 +47,10 @@ class ClientFormViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(ClientFormUiState(isEditMode = clientId != null))
     val uiState: StateFlow<ClientFormUiState> = _uiState.asStateFlow()
 
-    // Navegación única — mismo patrón que LoginViewModel (Historia 1.4)
-    private val _navEvent = Channel<Unit>(Channel.CONFLATED)
+    // Navegación única — mismo patrón que LoginViewModel (Historia 1.4). Emite el id del cliente
+    // guardado (alta o edición) — Historia 3.2 (S-03) lo necesita para preseleccionar el cliente
+    // recién creado; S-11/S-12 lo reciben también pero lo ignoran.
+    private val _navEvent = Channel<String>(Channel.CONFLATED)
     val navEvent = _navEvent.receiveAsFlow()
 
     init {
@@ -125,7 +127,7 @@ class ClientFormViewModel @Inject constructor(
                 when (saved) {
                     true -> {
                         _uiState.value = _uiState.value.copy(isSaving = false)
-                        _navEvent.send(Unit)
+                        _navEvent.send(clientId)
                     }
                     false -> _uiState.value = _uiState.value.copy(
                         isSaving = false,
@@ -147,9 +149,9 @@ class ClientFormViewModel @Inject constructor(
             val created = runCatching {
                 clientRepository.createClient(name, phone, rfc, address, notes, fkTenant)
             }
-            created.onSuccess {
+            created.onSuccess { newClientId ->
                 _uiState.value = _uiState.value.copy(isSaving = false)
-                _navEvent.send(Unit)
+                _navEvent.send(newClientId)
             }.onFailure {
                 _uiState.value = _uiState.value.copy(isSaving = false, errorMessage = GENERIC_ERROR)
             }

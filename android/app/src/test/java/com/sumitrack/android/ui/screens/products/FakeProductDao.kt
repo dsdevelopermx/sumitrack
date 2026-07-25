@@ -17,6 +17,9 @@ class FakeProductDao : ProductDao {
     override fun getAllAsFlow(tenantId: String): Flow<List<ProductEntity>> =
         allFlow.map { list -> list.filter { it.fkTenant == tenantId } }
 
+    override fun getActiveAsFlow(tenantId: String): Flow<List<ProductEntity>> =
+        allFlow.map { list -> list.filter { it.fkTenant == tenantId && it.isActive } }
+
     override suspend fun getById(id: String, tenantId: String): ProductEntity? =
         allFlow.value.find { it.id == id && it.fkTenant == tenantId }
 
