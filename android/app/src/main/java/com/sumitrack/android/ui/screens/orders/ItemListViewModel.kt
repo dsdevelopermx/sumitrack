@@ -41,7 +41,7 @@ class ItemListViewModel @Inject constructor(
     @TenantId private val tenantId: Flow<String?>,
 ) : ViewModel() {
 
-    private val clientId: String = checkNotNull(savedStateHandle["clientId"])
+    val clientId: String = checkNotNull(savedStateHandle["clientId"])
 
     private val _uiState = MutableStateFlow(ItemListUiState())
     val uiState: StateFlow<ItemListUiState> = _uiState.asStateFlow()

@@ -16,6 +16,8 @@ import com.sumitrack.android.ui.screens.clients.ClientProfileScreen
 import com.sumitrack.android.ui.screens.orders.ClientSelectScreen
 import com.sumitrack.android.ui.screens.orders.ItemListScreen
 import com.sumitrack.android.ui.screens.orders.OrderListScreen
+import com.sumitrack.android.ui.screens.orders.OrderSummaryScreen
+import com.sumitrack.android.ui.screens.orders.PaymentScreen
 import com.sumitrack.android.ui.screens.products.ProductFormScreen
 import com.sumitrack.android.ui.screens.products.ProductListScreen
 import com.sumitrack.android.ui.screens.settings.SettingsScreen
@@ -126,6 +128,39 @@ fun NavGraph(navController: NavHostController, modifier: Modifier = Modifier) {
                 onBackClick = { navController.popBackStack() },
                 onGoToSettingsClick = {
                     navController.navigate(Routes.Settings.route) { launchSingleTop = true }
+                },
+                onReviewOrderClick = { clientId, cart ->
+                    navController.navigate(Routes.OrderSummary.createRoute(clientId, cart)) { launchSingleTop = true }
+                },
+            )
+        }
+        composable(
+            route = Routes.OrderSummary.route,
+            arguments = listOf(
+                navArgument("clientId") { type = NavType.StringType },
+                navArgument("cart") { type = NavType.StringType },
+            ),
+        ) {
+            OrderSummaryScreen(
+                onEditClick = { navController.popBackStack() },
+                onGoToPaymentClick = { clientId, cart ->
+                    navController.navigate(Routes.Payment.createRoute(clientId, cart)) { launchSingleTop = true }
+                },
+            )
+        }
+        composable(
+            route = Routes.Payment.route,
+            arguments = listOf(
+                navArgument("clientId") { type = NavType.StringType },
+                navArgument("cart") { type = NavType.StringType },
+            ),
+        ) {
+            PaymentScreen(
+                onBackClick = { navController.popBackStack() },
+                onConfirmed = {
+                    // Limpia todo el back stack de la orden (S-03→S-04→S-06→S-07) y regresa
+                    // directo a S-02; el Snackbar placeholder ya se mostró en PaymentScreen.
+                    navController.popBackStack(Routes.Orders.route, false)
                 },
             )
         }

@@ -6,8 +6,8 @@ import androidx.room.PrimaryKey
 import java.math.BigDecimal
 import java.time.Instant
 
-@Entity(tableName = "sales")
-data class SaleEntity(
+@Entity(tableName = "installments")
+data class InstallmentEntity(
     @PrimaryKey
     @ColumnInfo(name = "id")
     val id: String,
@@ -15,23 +15,17 @@ data class SaleEntity(
     @ColumnInfo(name = "fk_tenant")
     val fkTenant: String,
 
-    @ColumnInfo(name = "fk_client")
-    val fkClient: String,
+    @ColumnInfo(name = "fk_sale")
+    val fkSale: String,
 
-    @ColumnInfo(name = "folio")
-    val folio: String,
+    @ColumnInfo(name = "amount")
+    val amount: BigDecimal,
 
-    @ColumnInfo(name = "total")
-    val total: BigDecimal,
-
-    @ColumnInfo(name = "subtotal")
-    val subtotal: BigDecimal = BigDecimal.ZERO,
-
-    @ColumnInfo(name = "tax")
-    val tax: BigDecimal = BigDecimal.ZERO,
+    @ColumnInfo(name = "due_date")
+    val dueDate: Instant,
 
     @ColumnInfo(name = "status")
-    val status: String,
+    val status: String = "pending",
 
     @ColumnInfo(name = "created_at")
     val createdAt: Instant,

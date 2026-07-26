@@ -20,4 +20,6 @@ class SettingsRepository @Inject constructor(
     suspend fun clearLocalSettings() {
         settingsDao.deleteAll()
     }
+
+    suspend fun getValue(key: String): String? = settingsDao.getValue(key)
 }

@@ -6,6 +6,10 @@ import com.sumitrack.android.data.local.entities.SaleEntity
 import com.sumitrack.android.data.repositories.ClientRepository
 import com.sumitrack.android.data.repositories.SaleRepository
 import com.sumitrack.android.domain.usecases.CalculateClientBalanceUseCase
+import com.sumitrack.android.ui.screens.orders.FakeInstallmentDao
+import com.sumitrack.android.ui.screens.orders.FakePaymentDao
+import com.sumitrack.android.ui.screens.orders.FakeSaleItemDao
+import com.sumitrack.android.ui.screens.products.FakeTransactionRunner
 import java.math.BigDecimal
 import java.time.Instant
 import kotlinx.coroutines.Dispatchers
@@ -37,7 +41,7 @@ class ClientProfileViewModelTest {
         Dispatchers.setMain(testDispatcher)
         fakeClientDao = FakeClientDao()
         fakeSaleDao = FakeSaleDao()
-        saleRepository = SaleRepository(fakeSaleDao)
+        saleRepository = SaleRepository(FakeTransactionRunner(), fakeSaleDao, FakeSaleItemDao(), FakeInstallmentDao(), FakePaymentDao())
         clientRepository = ClientRepository(fakeClientDao, CalculateClientBalanceUseCase(saleRepository))
     }
 

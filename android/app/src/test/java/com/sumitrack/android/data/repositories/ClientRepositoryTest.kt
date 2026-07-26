@@ -6,6 +6,10 @@ import com.sumitrack.android.domain.models.ClientSearchResult
 import com.sumitrack.android.domain.usecases.CalculateClientBalanceUseCase
 import com.sumitrack.android.ui.screens.clients.FakeClientDao
 import com.sumitrack.android.ui.screens.clients.FakeSaleDao
+import com.sumitrack.android.ui.screens.orders.FakeInstallmentDao
+import com.sumitrack.android.ui.screens.orders.FakePaymentDao
+import com.sumitrack.android.ui.screens.orders.FakeSaleItemDao
+import com.sumitrack.android.ui.screens.products.FakeTransactionRunner
 import java.math.BigDecimal
 import java.time.Instant
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -30,7 +34,12 @@ class ClientRepositoryTest {
     @Before
     fun setUp() {
         fakeDao = FakeClientDao()
-        repository = ClientRepository(fakeDao, CalculateClientBalanceUseCase(SaleRepository(FakeSaleDao())))
+        repository = ClientRepository(
+            fakeDao,
+            CalculateClientBalanceUseCase(
+                SaleRepository(FakeTransactionRunner(), FakeSaleDao(), FakeSaleItemDao(), FakeInstallmentDao(), FakePaymentDao())
+            ),
+        )
     }
 
     @Test

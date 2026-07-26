@@ -6,6 +6,7 @@ import com.sumitrack.android.data.repositories.SaleRepository
 import com.sumitrack.android.domain.usecases.CalculateClientBalanceUseCase
 import com.sumitrack.android.ui.screens.clients.FakeClientDao
 import com.sumitrack.android.ui.screens.clients.FakeSaleDao
+import com.sumitrack.android.ui.screens.products.FakeTransactionRunner
 import java.time.Instant
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -32,7 +33,12 @@ class ClientSelectViewModelTest {
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         fakeClientDao = FakeClientDao()
-        repository = ClientRepository(fakeClientDao, CalculateClientBalanceUseCase(SaleRepository(FakeSaleDao())))
+        repository = ClientRepository(
+            fakeClientDao,
+            CalculateClientBalanceUseCase(
+                SaleRepository(FakeTransactionRunner(), FakeSaleDao(), FakeSaleItemDao(), FakeInstallmentDao(), FakePaymentDao())
+            ),
+        )
     }
 
     @After

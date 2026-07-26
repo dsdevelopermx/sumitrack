@@ -45,6 +45,9 @@ interface SaleDao {
         normalizedQuery: String,
     ): Flow<List<OrderSummaryRow>>
 
+    @Query("SELECT COUNT(*) FROM sales WHERE fk_tenant = :tenantId")
+    suspend fun countSalesForTenant(tenantId: String): Int
+
     @Upsert
     suspend fun upsertAll(sales: List<SaleEntity>)
 }

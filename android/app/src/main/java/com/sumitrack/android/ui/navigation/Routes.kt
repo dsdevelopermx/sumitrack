@@ -27,4 +27,12 @@ sealed class Routes(val route: String) {
     object NewOrderItems : Routes("new_order_items/{clientId}") {
         fun createRoute(clientId: String): String = "new_order_items/$clientId"
     }
+
+    object OrderSummary : Routes("order_summary/{clientId}/{cart}") {
+        fun createRoute(clientId: String, cart: String): String = "order_summary/$clientId/$cart"
+    }
+
+    object Payment : Routes("payment/{clientId}/{cart}") {
+        fun createRoute(clientId: String, cart: String): String = "payment/$clientId/$cart"
+    }
 }

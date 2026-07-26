@@ -34,7 +34,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,7 +43,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sumitrack.android.domain.models.Product
 import com.sumitrack.android.ui.components.EmptyState
-import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import java.math.RoundingMode
 
@@ -53,12 +51,12 @@ import java.math.RoundingMode
 fun ItemListScreen(
     onBackClick: () -> Unit,
     onGoToSettingsClick: () -> Unit,
+    onReviewOrderClick: (clientId: String, cartEncoded: String) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
     viewModel: ItemListViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
     var showAbandonDialog by remember { mutableStateOf(false) }
 
     // Compartida entre el gesto/botón físico de back y el ícono de la TopAppBar (AC-6) — un solo
@@ -144,9 +142,8 @@ fun ItemListScreen(
                         modifier = Modifier.weight(1f),
                     )
                     Button(
-                        onClick = {
-                            scope.launch { snackbarHostState.showSnackbar("Resumen de orden — disponible próximamente") }
-                        },
+                        onClick = { onReviewOrderClick(viewModel.clientId, CartRouteCodec.encode(uiState.cart)) },
+                        enabled = uiState.cart.isNotEmpty(),
                     ) {
                         Text("Revisar Orden")
                     }

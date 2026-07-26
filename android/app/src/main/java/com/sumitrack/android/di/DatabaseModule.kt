@@ -7,9 +7,12 @@ import com.sumitrack.android.data.local.RoomTransactionRunner
 import com.sumitrack.android.data.local.SumitrackDatabase
 import com.sumitrack.android.data.local.TransactionRunner
 import com.sumitrack.android.data.local.dao.ClientDao
+import com.sumitrack.android.data.local.dao.InstallmentDao
+import com.sumitrack.android.data.local.dao.PaymentDao
 import com.sumitrack.android.data.local.dao.ProductDao
 import com.sumitrack.android.data.local.dao.ProductVariantDao
 import com.sumitrack.android.data.local.dao.SaleDao
+import com.sumitrack.android.data.local.dao.SaleItemDao
 import com.sumitrack.android.data.local.dao.SettingsDao
 import dagger.Module
 import dagger.Provides
@@ -48,6 +51,18 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideProductVariantDao(db: SumitrackDatabase): ProductVariantDao = db.productVariantDao()
+
+    @Provides
+    @Singleton
+    fun provideSaleItemDao(db: SumitrackDatabase): SaleItemDao = db.saleItemDao()
+
+    @Provides
+    @Singleton
+    fun provideInstallmentDao(db: SumitrackDatabase): InstallmentDao = db.installmentDao()
+
+    @Provides
+    @Singleton
+    fun providePaymentDao(db: SumitrackDatabase): PaymentDao = db.paymentDao()
 
     @Provides
     @Singleton

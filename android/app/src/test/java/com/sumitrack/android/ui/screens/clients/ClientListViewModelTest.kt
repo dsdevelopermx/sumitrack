@@ -9,6 +9,10 @@ import com.sumitrack.android.data.repositories.ClientRepository
 import com.sumitrack.android.data.repositories.SaleRepository
 import com.sumitrack.android.domain.models.Client
 import com.sumitrack.android.domain.usecases.CalculateClientBalanceUseCase
+import com.sumitrack.android.ui.screens.orders.FakeInstallmentDao
+import com.sumitrack.android.ui.screens.orders.FakePaymentDao
+import com.sumitrack.android.ui.screens.orders.FakeSaleItemDao
+import com.sumitrack.android.ui.screens.products.FakeTransactionRunner
 import java.math.BigDecimal
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -39,7 +43,12 @@ class ClientListViewModelTest {
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         fakeDao = FakeClientDao()
-        val repo = ClientRepository(fakeDao, CalculateClientBalanceUseCase(SaleRepository(FakeSaleDao())))
+        val repo = ClientRepository(
+            fakeDao,
+            CalculateClientBalanceUseCase(
+                SaleRepository(FakeTransactionRunner(), FakeSaleDao(), FakeSaleItemDao(), FakeInstallmentDao(), FakePaymentDao())
+            ),
+        )
         viewModel = ClientListViewModel(repo)
     }
 

@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-06-27
-last_updated: 2026-07-19  # updated: 3-2 → done (code review completo, 12 patches resueltos)
+last_updated: 2026-07-26  # updated: 3-3 → done (code review completo, 11 patches, 187 tests)
 project: sumitrack
 project_key: NOKEY
 tracking_system: file-system
@@ -62,7 +62,7 @@ development_status:
   epic-3: in-progress
   3-1-historial-de-ordenes: done
   3-2-seleccion-de-cliente-e-items-en-nueva-orden: done
-  3-3-resumen-de-orden-y-configuracion-de-pago: backlog
+  3-3-resumen-de-orden-y-configuracion-de-pago: done
   3-4-generacion-y-distribucion-del-ticket: backlog
   3-5-detalle-de-orden-e-historial-de-cobros: backlog
   3-6-registro-de-cobros-sobre-ventas-y-parcialidades: backlog

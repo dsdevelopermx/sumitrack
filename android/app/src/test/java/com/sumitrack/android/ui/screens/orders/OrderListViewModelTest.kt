@@ -4,6 +4,7 @@ import com.sumitrack.android.data.local.entities.SaleEntity
 import com.sumitrack.android.data.repositories.SaleRepository
 import com.sumitrack.android.domain.models.SaleStatus
 import com.sumitrack.android.ui.screens.clients.FakeSaleDao
+import com.sumitrack.android.ui.screens.products.FakeTransactionRunner
 import java.math.BigDecimal
 import java.time.Instant
 import kotlinx.coroutines.Dispatchers
@@ -31,7 +32,7 @@ class OrderListViewModelTest {
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         fakeDao = FakeSaleDao()
-        repository = SaleRepository(fakeDao)
+        repository = SaleRepository(FakeTransactionRunner(), fakeDao, FakeSaleItemDao(), FakeInstallmentDao(), FakePaymentDao())
         fakeDao.setClientNames(mapOf("client-1" to "Ana López", "client-2" to "Bernardo Ruiz"))
     }
 

@@ -1,4 +1,9 @@
 
+## Deferred from: code review de 3-3-resumen-de-orden-y-configuracion-de-pago (2026-07-26)
+
+- **Pérdida silenciosa de un ítem del carrito si el producto fue eliminado/desactivado entre S-04 y S-07** — `OrderSummaryViewModel`/`PaymentViewModel` resuelven el carrito codificado vía `productRepository.getProductById(...) ?: return@mapNotNull null`, descartando silenciosamente cualquier línea cuyo producto ya no exista, sin ningún aviso al usuario. Cambia el monto que se le cobrará al cliente sin que se note. Misma familia que el patrón de manejo de errores silencioso ya diferido en Historias 2.3/3.2, pero de mayor prioridad que los demás ítems de ese bucket por el impacto directo en el monto cobrado — priorizar este cuando se haga la pasada dedicada. [OrderSummaryViewModel.kt, PaymentViewModel.kt]
+- **Ningún test ejercita el rollback transaccional de `SaleRepository.createSale`** — `FakeTransactionRunner.run` ejecuta el bloque directamente sin simular un fallo a mitad de transacción, así que la atomicidad real (que sí provee `RoomTransactionRunner`/`Room.withTransaction` en producción) nunca se verifica en tests. No bloquea ningún AC; agregar cuando se toque `SaleRepository` de nuevo. [SaleRepositoryTest.kt]
+
 ## Deferred from: code review de 3-2-seleccion-de-cliente-e-items-en-nueva-orden (2026-07-19)
 
 - **Carrito en memoria de `ItemListViewModel` sin respaldo de `SavedStateHandle`** — una muerte de proceso a medio armar una orden en campo (escenario que la propia historia usa para justificar el flujo) pierde el carrito sin aviso. Persistir una lista anidada de `OrderDraftItem` (con `BigDecimal`, entidades de dominio) de forma Bundle-safe es una expansión de alcance sustancial, no exigida por ningún AC. [ItemListViewModel.kt]

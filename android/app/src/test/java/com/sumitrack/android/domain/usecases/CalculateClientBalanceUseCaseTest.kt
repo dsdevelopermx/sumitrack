@@ -3,6 +3,10 @@ package com.sumitrack.android.domain.usecases
 import com.sumitrack.android.data.local.entities.SaleEntity
 import com.sumitrack.android.data.repositories.SaleRepository
 import com.sumitrack.android.ui.screens.clients.FakeSaleDao
+import com.sumitrack.android.ui.screens.orders.FakeInstallmentDao
+import com.sumitrack.android.ui.screens.orders.FakePaymentDao
+import com.sumitrack.android.ui.screens.orders.FakeSaleItemDao
+import com.sumitrack.android.ui.screens.products.FakeTransactionRunner
 import java.math.BigDecimal
 import java.time.Instant
 import kotlinx.coroutines.test.runTest
@@ -18,7 +22,9 @@ class CalculateClientBalanceUseCaseTest {
     @Before
     fun setUp() {
         fakeDao = FakeSaleDao()
-        useCase = CalculateClientBalanceUseCase(SaleRepository(fakeDao))
+        useCase = CalculateClientBalanceUseCase(
+            SaleRepository(FakeTransactionRunner(), fakeDao, FakeSaleItemDao(), FakeInstallmentDao(), FakePaymentDao())
+        )
     }
 
     private fun sale(id: String, clientId: String, total: BigDecimal, status: String) = SaleEntity(

@@ -59,6 +59,9 @@ class FakeSaleDao : SaleDao {
                 }
         }
 
+    override suspend fun countSalesForTenant(tenantId: String): Int =
+        salesFlow.value.count { it.fkTenant == tenantId }
+
     override suspend fun upsertAll(sales: List<SaleEntity>) {
         val byId = salesFlow.value.associateBy { it.id }.toMutableMap()
         sales.forEach { byId[it.id] = it }
