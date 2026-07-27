@@ -385,4 +385,69 @@ class SaleRepositoryTest {
         assertEquals(emptyList<Any>(), ordersTenant2)
         assertNull(fakeDao.getOpenSalesForClient("client-1", "tenant-2").firstOrNull())
     }
+
+    @Test
+    fun `getSaleDetail bundles sale, items, payments and installments for Immediate mode`() = runTest {
+        val prod = product(id = "p1", price = BigDecimal("100.00"), taxRate = BigDecimal.ZERO, name = "Refresco")
+        val items = listOf(OrderDraftItem(prod, null, 2))
+        val saleId = repository.createSale(
+            tenantId = "tenant-1",
+            clientId = "client-1",
+            folio = "A1",
+            items = items,
+            paymentConfig = PaymentConfig.Immediate(listOf(PaymentMethodType.EFECTIVO to BigDecimal("200.00"))),
+        )
+
+        val detail = repository.getSaleDetail(saleId, "tenant-1")
+
+        assertEquals(saleId, detail?.sale?.id)
+        assertEquals(SaleStatus.PAID, detail?.sale?.status)
+        assertEquals(1, detail?.items?.size)
+        assertEquals("Refresco", detail?.items?.first()?.productName)
+        assertEquals(1, detail?.payments?.size)
+        assertEquals(emptyList<Any>(), detail?.installments)
+    }
+
+    @Test
+    fun `getSaleDetail bundles installments for Installments mode with no payments`() = runTest {
+        val items = listOf(OrderDraftItem(product(price = BigDecimal("300.00")), null, 1))
+        val installments = listOf(
+            InstallmentSuggestion(BigDecimal("150.00"), Instant.now()),
+            InstallmentSuggestion(BigDecimal("150.00"), Instant.now()),
+        )
+        val saleId = repository.createSale(
+            tenantId = "tenant-1",
+            clientId = "client-1",
+            folio = "A1",
+            items = items,
+            paymentConfig = PaymentConfig.Installments(installments),
+        )
+
+        val detail = repository.getSaleDetail(saleId, "tenant-1")
+
+        assertEquals(2, detail?.installments?.size)
+        assertEquals(emptyList<Any>(), detail?.payments)
+    }
+
+    @Test
+    fun `getSaleDetail returns null for an unknown saleId`() = runTest {
+        val detail = repository.getSaleDetail("does-not-exist", "tenant-1")
+        assertEquals(null, detail)
+    }
+
+    @Test
+    fun `getSaleDetail returns null when the sale belongs to a different tenant`() = runTest {
+        val items = listOf(OrderDraftItem(product(price = BigDecimal("10.00")), null, 1))
+        val saleId = repository.createSale(
+            tenantId = "tenant-1",
+            clientId = "client-1",
+            folio = "A1",
+            items = items,
+            paymentConfig = PaymentConfig.Immediate(listOf(PaymentMethodType.EFECTIVO to BigDecimal("10.00"))),
+        )
+
+        val detail = repository.getSaleDetail(saleId, "tenant-2")
+
+        assertEquals(null, detail)
+    }
 }

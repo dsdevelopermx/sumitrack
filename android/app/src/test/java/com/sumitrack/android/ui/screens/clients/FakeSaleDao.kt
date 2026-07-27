@@ -62,6 +62,15 @@ class FakeSaleDao : SaleDao {
     override suspend fun countSalesForTenant(tenantId: String): Int =
         salesFlow.value.count { it.fkTenant == tenantId }
 
+    // Simula getSaleDetail/GenerateTicketUseCase devolviendo null pese a que la venta se creó
+    // exitosamente — usado para probar el fallback de PaymentViewModel.loadTicket ante ese caso.
+    var forceGetByIdNull: Boolean = false
+
+    override suspend fun getById(id: String, tenantId: String): SaleEntity? {
+        if (forceGetByIdNull) return null
+        return salesFlow.value.find { it.id == id && it.fkTenant == tenantId }
+    }
+
     override suspend fun upsertAll(sales: List<SaleEntity>) {
         val byId = salesFlow.value.associateBy { it.id }.toMutableMap()
         sales.forEach { byId[it.id] = it }

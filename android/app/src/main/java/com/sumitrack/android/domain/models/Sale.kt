@@ -9,6 +9,8 @@ data class Sale(
     val fkClient: String,
     val folio: String,
     val total: BigDecimal,
+    val subtotal: BigDecimal = BigDecimal.ZERO,
+    val tax: BigDecimal = BigDecimal.ZERO,
     val status: SaleStatus,
     val createdAt: Instant,
     val updatedAt: Instant,

@@ -4,13 +4,17 @@ import androidx.lifecycle.SavedStateHandle
 import com.sumitrack.android.data.local.entities.SettingsEntity
 import com.sumitrack.android.data.remote.api.SettingsApiService
 import com.sumitrack.android.data.remote.dto.SettingDto
+import com.sumitrack.android.data.repositories.ClientRepository
 import com.sumitrack.android.data.repositories.ProductRepository
 import com.sumitrack.android.data.repositories.SaleRepository
 import com.sumitrack.android.data.repositories.SettingsRepository
 import com.sumitrack.android.domain.models.OrderDraftItem
 import com.sumitrack.android.domain.models.PaymentMethodType
+import com.sumitrack.android.domain.usecases.CalculateClientBalanceUseCase
 import com.sumitrack.android.domain.usecases.CalculateInstallmentsUseCase
+import com.sumitrack.android.domain.usecases.GenerateTicketUseCase
 import com.sumitrack.android.domain.usecases.ValidateFolioUseCase
+import com.sumitrack.android.ui.screens.clients.FakeClientDao
 import com.sumitrack.android.ui.screens.clients.FakeSaleDao
 import com.sumitrack.android.ui.screens.products.FakeProductDao
 import com.sumitrack.android.ui.screens.products.FakeProductVariantDao
@@ -42,8 +46,12 @@ class PaymentViewModelTest {
     private lateinit var fakeSettingsDao: FakeSettingsDao
     private lateinit var saleRepository: SaleRepository
     private lateinit var fakeSaleDao: FakeSaleDao
+    private lateinit var clientRepository: ClientRepository
     private lateinit var validateFolioUseCase: ValidateFolioUseCase
     private lateinit var calculateInstallmentsUseCase: CalculateInstallmentsUseCase
+    private lateinit var generateTicketUseCase: GenerateTicketUseCase
+    private lateinit var fakeBluetoothTicketPrinter: FakeBluetoothTicketPrinter
+    private lateinit var fakeTicketFileWriter: FakeTicketFileWriter
 
     private val noOpApiService = object : SettingsApiService {
         override suspend fun getSettings(token: String): List<SettingDto> = emptyList()
@@ -57,8 +65,12 @@ class PaymentViewModelTest {
         settingsRepository = SettingsRepository(fakeSettingsDao, noOpApiService)
         fakeSaleDao = FakeSaleDao()
         saleRepository = SaleRepository(FakeTransactionRunner(), fakeSaleDao, FakeSaleItemDao(), FakeInstallmentDao(), FakePaymentDao())
+        clientRepository = ClientRepository(FakeClientDao(), CalculateClientBalanceUseCase(saleRepository))
         validateFolioUseCase = ValidateFolioUseCase(fakeSaleDao, settingsRepository)
         calculateInstallmentsUseCase = CalculateInstallmentsUseCase()
+        generateTicketUseCase = GenerateTicketUseCase(saleRepository, clientRepository, settingsRepository)
+        fakeBluetoothTicketPrinter = FakeBluetoothTicketPrinter()
+        fakeTicketFileWriter = FakeTicketFileWriter()
     }
 
     @After
@@ -73,6 +85,9 @@ class PaymentViewModelTest {
         saleRepository = saleRepository,
         validateFolioUseCase = validateFolioUseCase,
         calculateInstallmentsUseCase = calculateInstallmentsUseCase,
+        generateTicketUseCase = generateTicketUseCase,
+        bluetoothTicketPrinter = fakeBluetoothTicketPrinter,
+        ticketFileWriter = fakeTicketFileWriter,
         tenantId = flowOf(tenantId),
     )
 
@@ -290,5 +305,198 @@ class PaymentViewModelTest {
 
         assertEquals(emptyList<Any>(), vm.uiState.value.installments)
         assertFalse(vm.uiState.value.isInstallmentsConfirmEnabled)
+    }
+
+    @Test
+    fun `onConfirmClick success populates ticketData with the folio and clears isSaving`() = runTest {
+        val cart = cartWithProduct(BigDecimal("100.00"))
+        val vm = viewModel(cart = cart)
+        advanceUntilIdle()
+        val localId = vm.uiState.value.paymentMethods.first().localId
+        vm.onPaymentMethodAmountChange(localId, "100.00")
+
+        val job = launch { vm.navEvent.collect {} }
+        vm.onConfirmClick()
+        advanceUntilIdle()
+
+        assertEquals("A1", vm.uiState.value.ticketData?.folio)
+        assertFalse(vm.uiState.value.isSaving)
+        job.cancel()
+    }
+
+    @Test
+    fun `onPrintClick success clears isPrinting and printError`() = runTest {
+        val cart = cartWithProduct(BigDecimal("100.00"))
+        val vm = viewModel(cart = cart)
+        advanceUntilIdle()
+        val localId = vm.uiState.value.paymentMethods.first().localId
+        vm.onPaymentMethodAmountChange(localId, "100.00")
+        val job = launch { vm.navEvent.collect {} }
+        vm.onConfirmClick()
+        advanceUntilIdle()
+
+        fakeBluetoothTicketPrinter.result = Result.success(Unit)
+        vm.onPrintClick()
+        advanceUntilIdle()
+
+        assertEquals(1, fakeBluetoothTicketPrinter.printCallCount)
+        assertFalse(vm.uiState.value.isPrinting)
+        assertEquals(null, vm.uiState.value.printError)
+        job.cancel()
+    }
+
+    @Test
+    fun `onPrintClick failure sets the exact AC-3 error message and keeps the sheet state`() = runTest {
+        val cart = cartWithProduct(BigDecimal("100.00"))
+        val vm = viewModel(cart = cart)
+        advanceUntilIdle()
+        val localId = vm.uiState.value.paymentMethods.first().localId
+        vm.onPaymentMethodAmountChange(localId, "100.00")
+        val job = launch { vm.navEvent.collect {} }
+        vm.onConfirmClick()
+        advanceUntilIdle()
+
+        fakeBluetoothTicketPrinter.result = Result.failure(IllegalStateException("no printer"))
+        vm.onPrintClick()
+        advanceUntilIdle()
+
+        assertEquals(
+            "No encontramos la impresora. La orden ya está guardada — puedes compartir el ticket después.",
+            vm.uiState.value.printError,
+        )
+        assertFalse(vm.uiState.value.isPrinting)
+        assertNotNull(vm.uiState.value.ticketData) // el sheet permanece abierto (AC-3)
+        job.cancel()
+    }
+
+    @Test
+    fun `onShareClick writes the ticket and emits shareEvent with the returned uri`() = runTest {
+        val cart = cartWithProduct(BigDecimal("100.00"))
+        val vm = viewModel(cart = cart)
+        advanceUntilIdle()
+        val localId = vm.uiState.value.paymentMethods.first().localId
+        vm.onPaymentMethodAmountChange(localId, "100.00")
+        val navJob = launch { vm.navEvent.collect {} }
+        vm.onConfirmClick()
+        advanceUntilIdle()
+
+        fakeTicketFileWriter.uriToReturn = "content://sumitrack/ticket_A1.png"
+        var sharedUri: String? = null
+        val shareJob = launch { vm.shareEvent.collect { sharedUri = it } }
+
+        vm.onShareClick()
+        advanceUntilIdle()
+
+        assertEquals("content://sumitrack/ticket_A1.png", sharedUri)
+        assertEquals("ticket_A1.png", fakeTicketFileWriter.lastFileName)
+        navJob.cancel()
+        shareJob.cancel()
+    }
+
+    @Test
+    fun `onTicketDismiss clears ticketData and printError`() = runTest {
+        val cart = cartWithProduct(BigDecimal("100.00"))
+        val vm = viewModel(cart = cart)
+        advanceUntilIdle()
+        val localId = vm.uiState.value.paymentMethods.first().localId
+        vm.onPaymentMethodAmountChange(localId, "100.00")
+        val job = launch { vm.navEvent.collect {} }
+        vm.onConfirmClick()
+        advanceUntilIdle()
+        assertNotNull(vm.uiState.value.ticketData)
+
+        vm.onTicketDismiss()
+
+        assertEquals(null, vm.uiState.value.ticketData)
+        assertEquals(null, vm.uiState.value.printError)
+        job.cancel()
+    }
+
+    @Test
+    fun `onBluetoothPermissionDenied sets a clear error message instead of attempting to print`() = runTest {
+        val cart = cartWithProduct(BigDecimal("100.00"))
+        val vm = viewModel(cart = cart)
+        advanceUntilIdle()
+        val localId = vm.uiState.value.paymentMethods.first().localId
+        vm.onPaymentMethodAmountChange(localId, "100.00")
+        val job = launch { vm.navEvent.collect {} }
+        vm.onConfirmClick()
+        advanceUntilIdle()
+
+        vm.onBluetoothPermissionDenied()
+
+        assertEquals(
+            "Se necesita permiso de Bluetooth para imprimir. Puedes compartir el ticket en su lugar.",
+            vm.uiState.value.printError,
+        )
+        assertEquals(0, fakeBluetoothTicketPrinter.printCallCount)
+        job.cancel()
+    }
+
+    @Test
+    fun `onShareClick failure sets an error message and clears isSharing`() = runTest {
+        val cart = cartWithProduct(BigDecimal("100.00"))
+        val vm = viewModel(cart = cart)
+        advanceUntilIdle()
+        val localId = vm.uiState.value.paymentMethods.first().localId
+        vm.onPaymentMethodAmountChange(localId, "100.00")
+        val job = launch { vm.navEvent.collect {} }
+        vm.onConfirmClick()
+        advanceUntilIdle()
+
+        fakeTicketFileWriter.throwOnWrite = java.io.IOException("disk full")
+        var sharedUri: String? = null
+        val shareJob = launch { vm.shareEvent.collect { sharedUri = it } }
+
+        vm.onShareClick()
+        advanceUntilIdle()
+
+        assertEquals("No se pudo preparar el ticket para compartir. Inténtalo de nuevo.", vm.uiState.value.printError)
+        assertFalse(vm.uiState.value.isSharing)
+        assertEquals(null, sharedUri)
+        job.cancel()
+        shareJob.cancel()
+    }
+
+    @Test
+    fun `onShareClick is a no-op while a previous share is still in flight`() = runTest {
+        val cart = cartWithProduct(BigDecimal("100.00"))
+        val vm = viewModel(cart = cart)
+        advanceUntilIdle()
+        val localId = vm.uiState.value.paymentMethods.first().localId
+        vm.onPaymentMethodAmountChange(localId, "100.00")
+        val job = launch { vm.navEvent.collect {} }
+        vm.onConfirmClick()
+        advanceUntilIdle()
+
+        // Simula estar a mitad de una escritura: onShareClick ya marcó isSharing=true pero el
+        // launch todavía no corre (runTest no avanza hasta advanceUntilIdle).
+        vm.onShareClick()
+        vm.onShareClick()
+        advanceUntilIdle()
+
+        // Solo la primera llamada debió llegar a escribir — la segunda debió descartarse por el
+        // guard de isSharing (síncrono, igual que el de onConfirmClick/onPrintClick).
+        assertEquals("ticket_A1.png", fakeTicketFileWriter.lastFileName)
+        job.cancel()
+    }
+
+    @Test
+    fun `when GenerateTicketUseCase returns null, ticketLoadFailed is set instead of leaving ticketData stuck`() = runTest {
+        val cart = cartWithProduct(BigDecimal("100.00"))
+        val vm = viewModel(cart = cart)
+        advanceUntilIdle()
+        val localId = vm.uiState.value.paymentMethods.first().localId
+        vm.onPaymentMethodAmountChange(localId, "100.00")
+        val job = launch { vm.navEvent.collect {} }
+
+        fakeSaleDao.forceGetByIdNull = true
+        vm.onConfirmClick()
+        advanceUntilIdle()
+
+        assertEquals(null, vm.uiState.value.ticketData)
+        assertTrue(vm.uiState.value.ticketLoadFailed)
+        assertFalse(vm.uiState.value.isSaving)
+        job.cancel()
     }
 }

@@ -29,11 +29,19 @@ fun NavGraph(navController: NavHostController, modifier: Modifier = Modifier) {
         startDestination = Routes.Orders.route,
         modifier = modifier,
     ) {
-        composable(Routes.Orders.route) {
+        composable(Routes.Orders.route) { backStackEntry ->
+            // Mismo patrón de "resultado vía SavedStateHandle de la entrada previa" ya usado para
+            // ClientForm→newClientId (Historia 3.2), aquí "hacia adelante": Payment marca este
+            // flag antes de hacer popBackStack de regreso a esta pantalla (ver Routes.Payment).
+            val focusFab by backStackEntry.savedStateHandle
+                .getStateFlow("focusFab", false)
+                .collectAsStateWithLifecycle()
             OrderListScreen(
                 onNewOrderClick = {
                     navController.navigate(Routes.NewOrderClientSelect.route) { launchSingleTop = true }
                 },
+                focusFabOnEntry = focusFab,
+                onFabFocusConsumed = { backStackEntry.savedStateHandle["focusFab"] = false },
             )
         }
         composable(Routes.Clients.route)  {
@@ -158,8 +166,11 @@ fun NavGraph(navController: NavHostController, modifier: Modifier = Modifier) {
             PaymentScreen(
                 onBackClick = { navController.popBackStack() },
                 onConfirmed = {
+                    // Se invoca al cerrar el TicketSheet (S-08, Historia 3.4), no al confirmar el
+                    // pago — la navegación real a S-02 se retrasa hasta ese momento (AC-5).
                     // Limpia todo el back stack de la orden (S-03→S-04→S-06→S-07) y regresa
-                    // directo a S-02; el Snackbar placeholder ya se mostró en PaymentScreen.
+                    // directo a S-02; marca el flag para que el FAB reciba el foco de TalkBack.
+                    navController.getBackStackEntry(Routes.Orders.route).savedStateHandle["focusFab"] = true
                     navController.popBackStack(Routes.Orders.route, false)
                 },
             )

@@ -3,6 +3,7 @@ package com.sumitrack.android.ui.screens.orders
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.sumitrack.android.data.bluetooth.BluetoothTicketPrinter
 import com.sumitrack.android.data.repositories.PaymentConfig
 import com.sumitrack.android.data.repositories.ProductRepository
 import com.sumitrack.android.data.repositories.SaleRepository
@@ -11,8 +12,10 @@ import com.sumitrack.android.di.TenantId
 import com.sumitrack.android.domain.models.InstallmentPeriodicity
 import com.sumitrack.android.domain.models.OrderDraftItem
 import com.sumitrack.android.domain.models.PaymentMethodType
+import com.sumitrack.android.domain.models.TicketData
 import com.sumitrack.android.domain.models.calculateOrderTotals
 import com.sumitrack.android.domain.usecases.CalculateInstallmentsUseCase
+import com.sumitrack.android.domain.usecases.GenerateTicketUseCase
 import com.sumitrack.android.domain.usecases.InstallmentSuggestion
 import com.sumitrack.android.domain.usecases.ValidateFolioUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -51,6 +54,11 @@ data class PaymentUiState(
     val maxParcialidades: Int = 15,
     val isSaving: Boolean = false,
     val errorMessage: String? = null,
+    val ticketData: TicketData? = null,
+    val ticketLoadFailed: Boolean = false,
+    val isPrinting: Boolean = false,
+    val isSharing: Boolean = false,
+    val printError: String? = null,
 ) {
     val total: BigDecimal get() = calculateOrderTotals(items).total
 
@@ -85,6 +93,9 @@ class PaymentViewModel @Inject constructor(
     private val saleRepository: SaleRepository,
     private val validateFolioUseCase: ValidateFolioUseCase,
     private val calculateInstallmentsUseCase: CalculateInstallmentsUseCase,
+    private val generateTicketUseCase: GenerateTicketUseCase,
+    private val bluetoothTicketPrinter: BluetoothTicketPrinter,
+    private val ticketFileWriter: TicketFileWriter,
     @TenantId private val tenantId: Flow<String?>,
 ) : ViewModel() {
 
@@ -94,8 +105,16 @@ class PaymentViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(PaymentUiState())
     val uiState: StateFlow<PaymentUiState> = _uiState.asStateFlow()
 
-    private val _navEvent = Channel<Unit>()
+    // Emite el saleId de la venta recién creada — PaymentScreen usa este evento solo para
+    // disparar loadTicket (ver más abajo); la navegación de regreso a Órdenes se retrasa hasta
+    // que el usuario cierra el TicketSheet (AC-5), no hasta que este evento se recibe.
+    private val _navEvent = Channel<String>()
     val navEvent = _navEvent.receiveAsFlow()
+
+    // Uri del PNG ya escrito en caché — PaymentScreen lo colecta para disparar el Intent.ACTION_SEND
+    // real (necesita un Context de UI, no debe vivir en el ViewModel).
+    private val _shareEvent = Channel<String>()
+    val shareEvent = _shareEvent.receiveAsFlow()
 
     init {
         viewModelScope.launch {
@@ -263,14 +282,71 @@ class PaymentViewModel @Inject constructor(
                 val folio = validateFolioUseCase(tenant)
                 saleRepository.createSale(tenant, clientId, folio, state.items, paymentConfig)
             }
-            result.onSuccess {
-                // isSaving NO se resetea a false aquí: la pantalla está a punto de navegar fuera
-                // (ver PaymentScreen/NavGraph), así que reactivar el botón solo abriría una ventana
-                // para un segundo tap antes de que la navegación realmente ocurra.
-                _navEvent.send(Unit)
+            result.onSuccess { saleId ->
+                // isSaving NO se resetea a false aquí: la pantalla está a punto de mostrar el
+                // TicketSheet (ver PaymentScreen), así que reactivar el botón solo abriría una
+                // ventana para un segundo tap mientras el ticket se carga.
+                _navEvent.send(saleId)
+                loadTicket(saleId, tenant)
             }.onFailure {
                 _uiState.update { it.copy(isSaving = false, errorMessage = "Algo salió mal. Inténtalo de nuevo.") }
             }
         }
+    }
+
+    private suspend fun loadTicket(saleId: String, tenant: String) {
+        val ticket = runCatching { generateTicketUseCase(saleId, tenant) }.getOrNull()
+        // ticketLoadFailed=true cuando el use case devuelve null (o lanza): sin esto, ticketData
+        // se queda en null y TicketSheet nunca se muestra — el proveedor quedaba varado en
+        // PaymentScreen pese a que la venta ya se guardó exitosamente (Review Finding del code
+        // review de esta historia). PaymentScreen usa este flag para ofrecer una salida explícita.
+        _uiState.update { it.copy(isSaving = false, ticketData = ticket, ticketLoadFailed = ticket == null) }
+    }
+
+    fun onPrintClick() {
+        val ticket = _uiState.value.ticketData ?: return
+        if (_uiState.value.isPrinting) return
+        _uiState.update { it.copy(isPrinting = true, printError = null) }
+        viewModelScope.launch {
+            val result = bluetoothTicketPrinter.printTicket(ticket)
+            result.onSuccess {
+                _uiState.update { it.copy(isPrinting = false) }
+            }.onFailure {
+                _uiState.update {
+                    it.copy(
+                        isPrinting = false,
+                        printError = "No encontramos la impresora. La orden ya está guardada — puedes compartir el ticket después.",
+                    )
+                }
+            }
+        }
+    }
+
+    fun onBluetoothPermissionDenied() {
+        _uiState.update {
+            it.copy(printError = "Se necesita permiso de Bluetooth para imprimir. Puedes compartir el ticket en su lugar.")
+        }
+    }
+
+    fun onShareClick() {
+        val ticket = _uiState.value.ticketData ?: return
+        if (_uiState.value.isSharing) return
+        _uiState.update { it.copy(isSharing = true, printError = null) }
+        viewModelScope.launch {
+            runCatching { ticketFileWriter.writeToCacheAndGetUri(ticket, "ticket_${ticket.folio}.png") }
+                .onSuccess { uri ->
+                    _uiState.update { it.copy(isSharing = false) }
+                    _shareEvent.send(uri)
+                }
+                .onFailure {
+                    _uiState.update {
+                        it.copy(isSharing = false, printError = "No se pudo preparar el ticket para compartir. Inténtalo de nuevo.")
+                    }
+                }
+        }
+    }
+
+    fun onTicketDismiss() {
+        _uiState.update { it.copy(ticketData = null, ticketLoadFailed = false, printError = null) }
     }
 }

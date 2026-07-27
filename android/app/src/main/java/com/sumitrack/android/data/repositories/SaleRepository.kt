@@ -11,10 +11,15 @@ import com.sumitrack.android.data.local.entities.InstallmentEntity
 import com.sumitrack.android.data.local.entities.PaymentEntity
 import com.sumitrack.android.data.local.entities.SaleEntity
 import com.sumitrack.android.data.local.entities.SaleItemEntity
+import com.sumitrack.android.domain.models.Installment
+import com.sumitrack.android.domain.models.InstallmentStatus
 import com.sumitrack.android.domain.models.OrderDraftItem
 import com.sumitrack.android.domain.models.OrderSummary
+import com.sumitrack.android.domain.models.Payment
 import com.sumitrack.android.domain.models.PaymentMethodType
 import com.sumitrack.android.domain.models.Sale
+import com.sumitrack.android.domain.models.SaleDetail
+import com.sumitrack.android.domain.models.SaleItem
 import com.sumitrack.android.domain.models.SaleStatus
 import com.sumitrack.android.domain.models.SyncStatus
 import com.sumitrack.android.domain.models.calculateOrderTotals
@@ -140,13 +145,69 @@ class SaleRepository @Inject constructor(
         return sale.id
     }
 
+    // Reutiliza saleItemDao/installmentDao/paymentDao (inyectados desde Historia 3.3 "por
+    // paridad", sin uso hasta ahora) para ensamblar el detalle completo de una venta que
+    // GenerateTicketUseCase (Historia 3.4) necesita.
+    suspend fun getSaleDetail(saleId: String, tenantId: String): SaleDetail? {
+        val sale = saleDao.getById(saleId, tenantId)?.toDomain() ?: return null
+        return SaleDetail(
+            sale = sale,
+            items = saleItemDao.getForSale(saleId, tenantId).map { it.toDomain() },
+            payments = paymentDao.getForSale(saleId, tenantId).map { it.toDomain() },
+            installments = installmentDao.getForSale(saleId, tenantId).map { it.toDomain() },
+        )
+    }
+
     private fun SaleEntity.toDomain() = Sale(
         id = id,
         fkTenant = fkTenant,
         fkClient = fkClient,
         folio = folio,
         total = total,
+        subtotal = subtotal,
+        tax = tax,
         status = SaleStatus.fromString(status),
+        createdAt = createdAt,
+        updatedAt = updatedAt,
+        syncStatus = SyncStatus.fromString(syncStatus),
+    )
+
+    private fun SaleItemEntity.toDomain() = SaleItem(
+        id = id,
+        fkTenant = fkTenant,
+        fkSale = fkSale,
+        fkProduct = fkProduct,
+        fkVariant = fkVariant,
+        productName = productName,
+        variantName = variantName,
+        quantity = quantity,
+        unitPrice = unitPrice,
+        taxRate = taxRate,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
+        syncStatus = SyncStatus.fromString(syncStatus),
+    )
+
+    private fun PaymentEntity.toDomain() = Payment(
+        id = id,
+        fkTenant = fkTenant,
+        fkSale = fkSale,
+        fkInstallment = fkInstallment,
+        method = PaymentMethodType.fromString(method),
+        amount = amount,
+        paidAt = paidAt,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
+        syncStatus = SyncStatus.fromString(syncStatus),
+    )
+
+    private fun InstallmentEntity.toDomain() = Installment(
+        id = id,
+        fkTenant = fkTenant,
+        fkSale = fkSale,
+        amount = amount,
+        dueDate = dueDate,
+        status = InstallmentStatus.fromString(status),
         createdAt = createdAt,
         updatedAt = updatedAt,
         syncStatus = SyncStatus.fromString(syncStatus),

@@ -26,12 +26,15 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -54,6 +57,8 @@ private val STATUS_CHIPS = listOf(
 fun OrderListScreen(
     modifier: Modifier = Modifier,
     onNewOrderClick: () -> Unit = {},
+    focusFabOnEntry: Boolean = false,
+    onFabFocusConsumed: () -> Unit = {},
     viewModel: OrderListViewModel = hiltViewModel(),
 ) {
     val orders by viewModel.orders.collectAsStateWithLifecycle()
@@ -63,8 +68,25 @@ fun OrderListScreen(
     var searchActive by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val fabFocusRequester = remember { FocusRequester() }
 
     BackHandler(enabled = searchActive) { searchActive = false }
+
+    // Al regresar de S-08 (TicketSheet, Historia 3.4), el foco de TalkBack debe volver al FAB
+    // (AC-5) — la confirmación de que TalkBack lo anuncia correctamente queda pendiente de
+    // verificación manual (sin dispositivo/adb en este entorno, mismo criterio que otras
+    // historias).
+    LaunchedEffect(focusFabOnEntry) {
+        if (focusFabOnEntry) {
+            // Primer uso de FocusRequester en el proyecto — sin forma de verificar sin dispositivo
+            // si el nodo ya está adjunto en este punto del ciclo de vida; runCatching evita que un
+            // IllegalStateException ("FocusRequester is not initialized") tumbe la composición
+            // (Review Finding del code review de esta historia). onFabFocusConsumed() se llama
+            // siempre, incluso si falla, para no reintentar en cada recomposición.
+            runCatching { fabFocusRequester.requestFocus() }
+            onFabFocusConsumed()
+        }
+    }
 
     Scaffold(
         modifier = modifier,
@@ -74,6 +96,7 @@ fun OrderListScreen(
                 text = { Text("+") },
                 icon = { Icon(Icons.Filled.Add, contentDescription = "Nueva Orden") },
                 onClick = onNewOrderClick,
+                modifier = Modifier.focusRequester(fabFocusRequester),
             )
         },
     ) { innerPadding ->

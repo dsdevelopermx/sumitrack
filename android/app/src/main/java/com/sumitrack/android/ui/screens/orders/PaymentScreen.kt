@@ -1,5 +1,7 @@
 package com.sumitrack.android.ui.screens.orders
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,6 +14,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
@@ -37,9 +40,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
@@ -66,13 +69,26 @@ fun PaymentScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
 
-    // S-08 (TicketSheet) es Historia 3.4, todavía no existe — placeholder explícito documentado
-    // en "Fuera de alcance" de esta historia.
+    // navEvent ya no navega de inmediato (S-08/TicketSheet reemplaza el placeholder de Historia
+    // 3.3) — loadTicket ya corre dentro del ViewModel al recibir este evento; el collector solo
+    // existe para no bloquear el `send()` del Channel (rendezvous, sin buffer).
     LaunchedEffect(Unit) {
-        viewModel.navEvent.collect {
-            launch { snackbarHostState.showSnackbar("Ticket — disponible próximamente") }
-            onConfirmed()
+        viewModel.navEvent.collect { /* no-op: ticketData ya se actualiza reactivamente en uiState */ }
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.shareEvent.collect { uriString ->
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "image/png"
+                putExtra(Intent.EXTRA_STREAM, Uri.parse(uriString))
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            // Sin app instalada capaz de manejar image/png (poco común, pero posible en un
+            // dispositivo muy restringido o un emulador sin apps de mensajería/correo).
+            runCatching { context.startActivity(Intent.createChooser(intent, null)) }
+                .onFailure { snackbarHostState.showSnackbar("No hay ninguna app instalada para compartir") }
         }
     }
 
@@ -158,6 +174,43 @@ fun PaymentScreen(
                 )
             }
         }
+    }
+
+    val ticketData = uiState.ticketData
+    if (ticketData != null) {
+        TicketSheet(
+            ticketData = ticketData,
+            isPrinting = uiState.isPrinting,
+            isSharing = uiState.isSharing,
+            printError = uiState.printError,
+            onPrintClick = viewModel::onPrintClick,
+            onPermissionDenied = viewModel::onBluetoothPermissionDenied,
+            onShareClick = viewModel::onShareClick,
+            onDismiss = {
+                viewModel.onTicketDismiss()
+                onConfirmed()
+            },
+        )
+    }
+
+    // GenerateTicketUseCase devolvió null (venta no encontrada u otro fallo interno) — sin esto
+    // el proveedor quedaba varado en PaymentScreen pese a que la venta ya se guardó exitosamente
+    // (Review Finding del code review de esta historia); TicketSheet nunca llega a mostrarse
+    // porque requiere ticketData no nulo, así que el swipe-down/tap-fuera tampoco es una opción.
+    if (uiState.ticketLoadFailed) {
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text("No se pudo generar el ticket") },
+            text = { Text("La venta ya se guardó. Puedes ver el detalle desde el Historial.") },
+            confirmButton = {
+                Button(onClick = {
+                    viewModel.onTicketDismiss()
+                    onConfirmed()
+                }) {
+                    Text("Ir a Historial")
+                }
+            },
+        )
     }
 }
 

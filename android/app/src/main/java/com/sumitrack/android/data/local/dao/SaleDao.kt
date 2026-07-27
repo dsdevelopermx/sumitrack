@@ -48,6 +48,9 @@ interface SaleDao {
     @Query("SELECT COUNT(*) FROM sales WHERE fk_tenant = :tenantId")
     suspend fun countSalesForTenant(tenantId: String): Int
 
+    @Query("SELECT * FROM sales WHERE id = :id AND fk_tenant = :tenantId LIMIT 1")
+    suspend fun getById(id: String, tenantId: String): SaleEntity?
+
     @Upsert
     suspend fun upsertAll(sales: List<SaleEntity>)
 }
