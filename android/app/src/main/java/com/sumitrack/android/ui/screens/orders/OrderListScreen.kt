@@ -30,7 +30,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -43,7 +42,6 @@ import com.sumitrack.android.ui.components.EmptyState
 import com.sumitrack.android.ui.components.FilterChipData
 import com.sumitrack.android.ui.components.FilterChipRow
 import com.sumitrack.android.ui.components.OrderCard
-import kotlinx.coroutines.launch
 
 private val STATUS_CHIPS = listOf(
     FilterChipData(SaleStatus.PENDING, "Pendiente"),
@@ -57,6 +55,7 @@ private val STATUS_CHIPS = listOf(
 fun OrderListScreen(
     modifier: Modifier = Modifier,
     onNewOrderClick: () -> Unit = {},
+    onOrderClick: (saleId: String) -> Unit = {},
     focusFabOnEntry: Boolean = false,
     onFabFocusConsumed: () -> Unit = {},
     viewModel: OrderListViewModel = hiltViewModel(),
@@ -67,7 +66,6 @@ fun OrderListScreen(
 
     var searchActive by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
     val fabFocusRequester = remember { FocusRequester() }
 
     BackHandler(enabled = searchActive) { searchActive = false }
@@ -178,11 +176,7 @@ fun OrderListScreen(
                         items(orders, key = { it.id }) { order ->
                             OrderCard(
                                 order = order,
-                                onClick = {
-                                    scope.launch {
-                                        snackbarHostState.showSnackbar("Detalle de orden — disponible próximamente")
-                                    }
-                                },
+                                onClick = { onOrderClick(order.id) },
                                 modifier = Modifier.padding(horizontal = 16.dp),
                             )
                         }

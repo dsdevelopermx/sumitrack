@@ -15,6 +15,7 @@ import com.sumitrack.android.ui.screens.clients.ClientListScreen
 import com.sumitrack.android.ui.screens.clients.ClientProfileScreen
 import com.sumitrack.android.ui.screens.orders.ClientSelectScreen
 import com.sumitrack.android.ui.screens.orders.ItemListScreen
+import com.sumitrack.android.ui.screens.orders.OrderDetailScreen
 import com.sumitrack.android.ui.screens.orders.OrderListScreen
 import com.sumitrack.android.ui.screens.orders.OrderSummaryScreen
 import com.sumitrack.android.ui.screens.orders.PaymentScreen
@@ -39,6 +40,9 @@ fun NavGraph(navController: NavHostController, modifier: Modifier = Modifier) {
             OrderListScreen(
                 onNewOrderClick = {
                     navController.navigate(Routes.NewOrderClientSelect.route) { launchSingleTop = true }
+                },
+                onOrderClick = { saleId ->
+                    navController.navigate(Routes.OrderDetail.createRoute(saleId)) { launchSingleTop = true }
                 },
                 focusFabOnEntry = focusFab,
                 onFabFocusConsumed = { backStackEntry.savedStateHandle["focusFab"] = false },
@@ -173,6 +177,14 @@ fun NavGraph(navController: NavHostController, modifier: Modifier = Modifier) {
                     navController.getBackStackEntry(Routes.Orders.route).savedStateHandle["focusFab"] = true
                     navController.popBackStack(Routes.Orders.route, false)
                 },
+            )
+        }
+        composable(
+            route = Routes.OrderDetail.route,
+            arguments = listOf(navArgument("saleId") { type = NavType.StringType }),
+        ) {
+            OrderDetailScreen(
+                onBackClick = { navController.popBackStack() },
             )
         }
     }
