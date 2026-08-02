@@ -1,5 +1,6 @@
 package com.sumitrack.android.data.repositories
 
+import com.sumitrack.android.data.local.entities.InstallmentEntity
 import com.sumitrack.android.data.local.entities.SaleEntity
 import com.sumitrack.android.domain.models.OrderDraftItem
 import com.sumitrack.android.domain.models.OrderSummary
@@ -88,6 +89,24 @@ class SaleRepositoryTest {
         createdAt = Instant.now(),
         updatedAt = Instant.now(),
         syncStatus = syncStatus,
+    )
+
+    private fun installmentEntity(
+        id: String,
+        saleId: String,
+        amount: BigDecimal,
+        status: String = "pending",
+        updatedAt: Instant = Instant.now(),
+    ) = InstallmentEntity(
+        id = id,
+        fkTenant = "tenant-1",
+        fkSale = saleId,
+        amount = amount,
+        dueDate = Instant.now(),
+        status = status,
+        createdAt = updatedAt,
+        updatedAt = updatedAt,
+        syncStatus = "pending",
     )
 
     @Test
@@ -449,5 +468,99 @@ class SaleRepositoryTest {
         val detail = repository.getSaleDetail(saleId, "tenant-2")
 
         assertEquals(null, detail)
+    }
+
+    @Test
+    fun `registerPayment for a single-payment sale creates the Payment and marks the sale paid`() = runTest {
+        fakeDao.setSales(listOf(sale(id = "s1", total = BigDecimal("100.00"), status = "pending")))
+
+        repository.registerPayment(
+            tenantId = "tenant-1", saleId = "s1", installmentId = null,
+            method = PaymentMethodType.EFECTIVO, amount = BigDecimal("100.00"), paidAt = Instant.now(),
+        )
+
+        val payments = fakePaymentDao.getForSale("s1", "tenant-1")
+        assertEquals(1, payments.size)
+        assertEquals(null, payments.first().fkInstallment)
+        assertEquals(BigDecimal("100.00"), payments.first().amount)
+        assertEquals("pending", payments.first().syncStatus)
+        assertEquals("paid", fakeDao.getById("s1", "tenant-1")?.status)
+    }
+
+    @Test
+    fun `registerPayment for an installment marks it paid and sets the sale to partial when others remain pending`() = runTest {
+        fakeDao.setSales(listOf(sale(id = "s1", total = BigDecimal("300.00"), status = "pending")))
+        fakeInstallmentDao.upsertAll(
+            listOf(
+                installmentEntity(id = "i1", saleId = "s1", amount = BigDecimal("150.00")),
+                installmentEntity(id = "i2", saleId = "s1", amount = BigDecimal("150.00")),
+            )
+        )
+
+        repository.registerPayment(
+            tenantId = "tenant-1", saleId = "s1", installmentId = "i1",
+            method = PaymentMethodType.TRANSFERENCIA, amount = BigDecimal("150.00"), paidAt = Instant.now(),
+        )
+
+        val installments = fakeInstallmentDao.getForSale("s1", "tenant-1").associateBy { it.id }
+        assertEquals("paid", installments["i1"]?.status)
+        assertEquals("pending", installments["i2"]?.status)
+        assertEquals("partial", fakeDao.getById("s1", "tenant-1")?.status)
+
+        val payments = fakePaymentDao.getForSale("s1", "tenant-1")
+        assertEquals(1, payments.size)
+        assertEquals("i1", payments.first().fkInstallment)
+    }
+
+    @Test
+    fun `registerPayment for the last pending installment sets the sale to paid`() = runTest {
+        fakeDao.setSales(listOf(sale(id = "s1", total = BigDecimal("300.00"), status = "partial")))
+        fakeInstallmentDao.upsertAll(
+            listOf(
+                installmentEntity(id = "i1", saleId = "s1", amount = BigDecimal("150.00"), status = "paid"),
+                installmentEntity(id = "i2", saleId = "s1", amount = BigDecimal("150.00")),
+            )
+        )
+
+        repository.registerPayment(
+            tenantId = "tenant-1", saleId = "s1", installmentId = "i2",
+            method = PaymentMethodType.EFECTIVO, amount = BigDecimal("150.00"), paidAt = Instant.now(),
+        )
+
+        assertEquals("paid", fakeDao.getById("s1", "tenant-1")?.status)
+    }
+
+    @Test
+    fun `registerPayment does nothing when the sale does not exist under the given tenant`() = runTest {
+        fakeDao.setSales(listOf(sale(id = "s1", total = BigDecimal("100.00"), status = "pending")))
+
+        repository.registerPayment(
+            tenantId = "tenant-2", saleId = "s1", installmentId = null,
+            method = PaymentMethodType.EFECTIVO, amount = BigDecimal("100.00"), paidAt = Instant.now(),
+        )
+
+        assertEquals(emptyList<Any>(), fakePaymentDao.getForSale("s1", "tenant-1"))
+        assertEquals(emptyList<Any>(), fakePaymentDao.getForSale("s1", "tenant-2"))
+        assertEquals("pending", fakeDao.getById("s1", "tenant-1")?.status)
+    }
+
+    @Test
+    fun `registerPayment does not rewrite installments other than the one being paid`() = runTest {
+        val untouchedTimestamp = Instant.parse("2020-01-01T00:00:00Z")
+        fakeDao.setSales(listOf(sale(id = "s1", total = BigDecimal("300.00"), status = "pending")))
+        fakeInstallmentDao.upsertAll(
+            listOf(
+                installmentEntity(id = "i1", saleId = "s1", amount = BigDecimal("150.00"), updatedAt = untouchedTimestamp),
+                installmentEntity(id = "i2", saleId = "s1", amount = BigDecimal("150.00"), updatedAt = untouchedTimestamp),
+            )
+        )
+
+        repository.registerPayment(
+            tenantId = "tenant-1", saleId = "s1", installmentId = "i1",
+            method = PaymentMethodType.EFECTIVO, amount = BigDecimal("150.00"), paidAt = Instant.now(),
+        )
+
+        val untouched = fakeInstallmentDao.getForSale("s1", "tenant-1").first { it.id == "i2" }
+        assertEquals(untouchedTimestamp, untouched.updatedAt)
     }
 }

@@ -2,6 +2,7 @@ package com.sumitrack.android.ui.screens.orders
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -24,6 +26,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -40,12 +43,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sumitrack.android.domain.models.Installment
 import com.sumitrack.android.domain.models.Payment
+import com.sumitrack.android.domain.models.PaymentMethodType
 import com.sumitrack.android.domain.models.SaleItem
 import com.sumitrack.android.domain.models.SaleStatus
 import com.sumitrack.android.domain.models.TicketPaymentCondition
@@ -72,6 +79,7 @@ fun OrderDetailScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
+    val hapticFeedback = LocalHapticFeedback.current
     var showCancelDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
@@ -164,10 +172,27 @@ fun OrderDetailScreen(
                                 style = MaterialTheme.typography.bodyMedium,
                                 modifier = Modifier.padding(top = 8.dp),
                             )
+                            if (uiState.status != SaleStatus.PAID && uiState.status != SaleStatus.CANCELLED) {
+                                Button(
+                                    onClick = { viewModel.onRegisterPaymentClick(null) },
+                                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                                ) {
+                                    Text("Registrar Cobro")
+                                }
+                            }
                         }
                         is TicketPaymentCondition.InstallmentPlan -> {
                             Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                uiState.installments.forEach { installment -> InstallmentRow(installment) }
+                                uiState.installments.forEach { installment ->
+                                    InstallmentRow(
+                                        installment = installment,
+                                        onClick = if (installment.toUiStatus() != InstallmentUiStatus.PAID) {
+                                            { viewModel.onRegisterPaymentClick(installment.id) }
+                                        } else {
+                                            null
+                                        },
+                                    )
+                                }
                             }
                         }
                         null -> Unit
@@ -233,6 +258,29 @@ fun OrderDetailScreen(
         )
     }
 
+    if (uiState.showRegisterPaymentDialog) {
+        val targetId = uiState.paymentTargetInstallmentId
+        val amount = if (targetId == null) uiState.total else uiState.installments.find { it.id == targetId }?.amount
+        // Si targetId no coincide con ninguna parcialidad actual (estado obsoleto tras un reload
+        // concurrente), cerramos el dialog en vez de mostrar un cobro confirmable de $0.00
+        // (Review Finding) — LaunchedEffect porque el dismiss es un efecto secundario, no algo
+        // seguro de disparar directamente durante composición.
+        if (amount == null) {
+            LaunchedEffect(Unit) { viewModel.onRegisterPaymentDialogDismiss() }
+        } else {
+            RegisterPaymentDialog(
+                amount = amount,
+                isRegistering = uiState.isRegisteringPayment,
+                error = uiState.registerPaymentError,
+                onConfirm = { method ->
+                    hapticFeedback.performHapticFeedback(HapticFeedbackType.Confirm)
+                    viewModel.onConfirmRegisterPayment(method)
+                },
+                onDismiss = viewModel::onRegisterPaymentDialogDismiss,
+            )
+        }
+    }
+
     val ticketData = uiState.ticketData
     if (ticketData != null) {
         TicketSheet(
@@ -280,9 +328,10 @@ private fun SummaryLine(label: String, amount: BigDecimal, emphasize: Boolean = 
 }
 
 @Composable
-private fun InstallmentRow(installment: Installment) {
+private fun InstallmentRow(installment: Installment, onClick: (() -> Unit)? = null) {
     val (label, color) = installmentStatusLabelAndColor(installment.toUiStatus())
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+    val rowModifier = if (onClick != null) Modifier.fillMaxWidth().clickable(onClick = onClick) else Modifier.fillMaxWidth()
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = rowModifier) {
         Column(modifier = Modifier.weight(1f)) {
             Text(formatDate(installment.dueDate), style = MaterialTheme.typography.bodyMedium)
             Text(formatAmount(installment.amount), style = MaterialTheme.typography.bodyLarge)
@@ -325,3 +374,64 @@ private fun formatDate(instant: Instant): String =
 
 private fun formatAmount(amount: BigDecimal): String =
     "$${amount.setScale(2, RoundingMode.HALF_UP).toPlainString()}"
+
+// No reutiliza PaymentMethodRow (ui/components/) — ese componente incluye un campo de monto
+// editable y un botón de eliminar pensados para el "Constructor de Métodos de Pago" de S-07
+// (crear una venta). Aquí el monto nunca es editable (siempre el total de la venta o el monto fijo
+// de la parcialidad, resuelto por RegisterPaymentUseCase) — reutilizarlo sugeriría incorrectamente
+// que sí lo es. paymentMethodLabel se duplica aquí en vez de exportar la privada de PaymentMethodRow.kt.
+@Composable
+private fun RegisterPaymentDialog(
+    amount: BigDecimal,
+    isRegistering: Boolean,
+    error: String?,
+    onConfirm: (PaymentMethodType) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var selectedMethod by remember { mutableStateOf(PaymentMethodType.EFECTIVO) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Registrar cobro") },
+        text = {
+            Column {
+                Text(formatAmount(amount), style = MaterialTheme.typography.titleLarge)
+                Column(modifier = Modifier.padding(top = 16.dp)) {
+                    PaymentMethodType.entries.forEach { method ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .selectable(
+                                    selected = method == selectedMethod,
+                                    onClick = { selectedMethod = method },
+                                    role = Role.RadioButton,
+                                ),
+                        ) {
+                            RadioButton(selected = method == selectedMethod, onClick = { selectedMethod = method })
+                            Text(registerPaymentMethodLabel(method))
+                        }
+                    }
+                }
+                if (error != null) {
+                    Text(error, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 8.dp))
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(selectedMethod) }, enabled = !isRegistering) {
+                Text("Confirmar")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !isRegistering) {
+                Text("Cancelar")
+            }
+        },
+    )
+}
+
+private fun registerPaymentMethodLabel(type: PaymentMethodType): String = when (type) {
+    PaymentMethodType.EFECTIVO -> "Efectivo"
+    PaymentMethodType.TRANSFERENCIA -> "Transferencia"
+    PaymentMethodType.TARJETA -> "Tarjeta"
+}

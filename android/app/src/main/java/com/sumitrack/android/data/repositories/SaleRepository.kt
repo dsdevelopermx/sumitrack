@@ -50,6 +50,9 @@ class SaleRepository @Inject constructor(
     suspend fun getOpenSalesForClient(clientId: String, tenantId: String): List<Sale> =
         saleDao.getOpenSalesForClient(clientId, tenantId).map { it.toDomain() }
 
+    suspend fun getPaymentsForSale(saleId: String, tenantId: String): List<Payment> =
+        paymentDao.getForSale(saleId, tenantId).map { it.toDomain() }
+
     fun getOrdersForTenant(tenantId: String, statusFilter: SaleStatus?, searchQuery: String): Flow<List<OrderSummary>> =
         saleDao.getOrdersForTenantAsFlow(
             tenantId = tenantId,
@@ -156,6 +159,55 @@ class SaleRepository @Inject constructor(
             payments = paymentDao.getForSale(saleId, tenantId).map { it.toDomain() },
             installments = installmentDao.getForSale(saleId, tenantId).map { it.toDomain() },
         )
+    }
+
+    // Historia 3.6: registra un cobro contra una venta de pago único (installmentId = null, monto
+    // = sale.total) o contra una parcialidad específica (monto = installment.amount). El monto
+    // siempre lo resuelve RegisterPaymentUseCase antes de llamar aquí — nunca es libre.
+    suspend fun registerPayment(
+        tenantId: String,
+        saleId: String,
+        installmentId: String?,
+        method: PaymentMethodType,
+        amount: BigDecimal,
+        paidAt: Instant,
+    ) {
+        transactionRunner.run {
+            // La venta se busca ANTES de escribir nada (Review Finding) — un `return@run` normal
+            // no revierte lo ya escrito en la transacción (Room solo hace rollback ante una
+            // excepción), así que validar primero evita dejar un Payment/parcialidad huérfanos si
+            // saleId/tenantId no corresponden a ninguna venta real.
+            val sale = saleDao.getById(saleId, tenantId) ?: return@run
+            paymentDao.upsertAll(
+                listOf(
+                    PaymentEntity(
+                        id = UUID.randomUUID().toString(),
+                        fkTenant = tenantId,
+                        fkSale = saleId,
+                        fkInstallment = installmentId,
+                        method = method.name.lowercase(),
+                        amount = amount,
+                        paidAt = paidAt,
+                        createdAt = paidAt,
+                        updatedAt = paidAt,
+                        syncStatus = "pending",
+                    )
+                )
+            )
+            val newSaleStatus = if (installmentId == null) {
+                "paid"
+            } else {
+                val installments = installmentDao.getForSale(saleId, tenantId)
+                val paidInstallment = installments.find { it.id == installmentId }
+                    ?.copy(status = "paid", updatedAt = paidAt)
+                if (paidInstallment != null) installmentDao.upsertAll(listOf(paidInstallment))
+                val allPaid = installments.all { it.id == installmentId || it.status == "paid" }
+                if (allPaid) "paid" else "partial"
+            }
+            // syncStatus = "pending" — mismo criterio que createSale: cualquier fila local
+            // modificada que deba subirse en la siguiente sincronización se marca pending.
+            saleDao.upsertAll(listOf(sale.copy(status = newSaleStatus, updatedAt = paidAt, syncStatus = "pending")))
+        }
     }
 
     private fun SaleEntity.toDomain() = Sale(

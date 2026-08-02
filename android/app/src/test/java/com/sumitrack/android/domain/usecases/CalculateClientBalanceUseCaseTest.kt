@@ -1,5 +1,6 @@
 package com.sumitrack.android.domain.usecases
 
+import com.sumitrack.android.data.local.entities.PaymentEntity
 import com.sumitrack.android.data.local.entities.SaleEntity
 import com.sumitrack.android.data.repositories.SaleRepository
 import com.sumitrack.android.ui.screens.clients.FakeSaleDao
@@ -17,13 +18,15 @@ import org.junit.Test
 class CalculateClientBalanceUseCaseTest {
 
     private lateinit var fakeDao: FakeSaleDao
+    private lateinit var fakePaymentDao: FakePaymentDao
     private lateinit var useCase: CalculateClientBalanceUseCase
 
     @Before
     fun setUp() {
         fakeDao = FakeSaleDao()
+        fakePaymentDao = FakePaymentDao()
         useCase = CalculateClientBalanceUseCase(
-            SaleRepository(FakeTransactionRunner(), fakeDao, FakeSaleItemDao(), FakeInstallmentDao(), FakePaymentDao())
+            SaleRepository(FakeTransactionRunner(), fakeDao, FakeSaleItemDao(), FakeInstallmentDao(), fakePaymentDao)
         )
     }
 
@@ -104,5 +107,23 @@ class CalculateClientBalanceUseCaseTest {
         val result = useCase("client-without-sales", "tenant-1")
 
         assertEquals(BigDecimal.ZERO, result)
+    }
+
+    @Test
+    fun `invoke subtracts payments already received on a partially-paid sale`() = runTest {
+        fakeDao.setSales(listOf(sale("1", "client-1", BigDecimal("300.00"), "partial")))
+        fakePaymentDao.upsertAll(
+            listOf(
+                PaymentEntity(
+                    id = "p1", fkTenant = "tenant-1", fkSale = "1", fkInstallment = "i1", method = "efectivo",
+                    amount = BigDecimal("150.00"), paidAt = Instant.now(), createdAt = Instant.now(), updatedAt = Instant.now(),
+                    syncStatus = "pending",
+                )
+            )
+        )
+
+        val result = useCase("client-1", "tenant-1")
+
+        assertEquals(BigDecimal("150.00"), result)
     }
 }

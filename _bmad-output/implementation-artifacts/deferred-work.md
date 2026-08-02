@@ -1,4 +1,10 @@
 
+## Deferred from: code review de 3-6-registro-de-cobros-sobre-ventas-y-parcialidades (2026-08-02)
+
+- **Condición de carrera en `SaleRepository.registerPayment`** — dos llamadas concurrentes podrían ambas leer el mismo estado "pendiente" antes de que cualquiera escriba, duplicando el cobro (dos `Payment` sumando el doble del total, la venta quedando marcada `paid` una sola vez). Baja probabilidad hoy: la app es de un solo dispositivo/sesión local, sin motor de sincronización ni escritura concurrente real todavía. Revisar cuando Epic 4 (sincronización offline) introduzca escritura multi-dispositivo genuina. [SaleRepository.kt, RegisterPaymentUseCase.kt]
+- **`InstallmentRow` tocable aunque la venta padre esté `CANCELLED`** — solo se valida el estado individual de la parcialidad, no el de la venta. Hoy inalcanzable: ninguna venta puede llegar a `CANCELLED` todavía (la cancelación real es Historia 3.7, sin implementar). Revisar/cerrar este gap al implementar esa historia. [OrderDetailScreen.kt]
+- **`SaleRepository.registerPayment` no valida el monto recibido**, confía en que `RegisterPaymentUseCase` ya lo resolvió correctamente (total de venta o monto de parcialidad) — consistente con el patrón ya establecido en `createSale` (tampoco valida sus propios parámetros), pero documentar si algún día se agrega un caller que no sea `RegisterPaymentUseCase`. [SaleRepository.kt]
+
 ## Deferred from: code review de 3-5-detalle-de-orden-e-historial-de-cobros (2026-07-29)
 
 - **`tenantId.first()` sin `runCatching` en `OrderDetailViewModel.init` y `onShareTicketClick`** — patrón inconsistente con otros ViewModels del proyecto (algunos envuelven la llamada, otros no; `PaymentViewModel.kt:121` tampoco la envuelve). Si el `Flow<String?>` de `SessionManager.tenantId` llegara a lanzar, la pantalla queda en `isLoading = true` indefinidamente sin estado de error. Requiere una pasada dedicada por todo el codebase para unificar el criterio. [OrderDetailViewModel.kt]

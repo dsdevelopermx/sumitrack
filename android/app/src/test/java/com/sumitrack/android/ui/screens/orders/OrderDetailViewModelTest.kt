@@ -1,6 +1,7 @@
 package com.sumitrack.android.ui.screens.orders
 
 import androidx.lifecycle.SavedStateHandle
+import com.sumitrack.android.data.local.entities.SaleEntity
 import com.sumitrack.android.data.remote.api.SettingsApiService
 import com.sumitrack.android.data.remote.dto.SettingDto
 import com.sumitrack.android.data.repositories.ClientRepository
@@ -16,6 +17,7 @@ import com.sumitrack.android.domain.models.TicketPaymentCondition
 import com.sumitrack.android.domain.usecases.CalculateClientBalanceUseCase
 import com.sumitrack.android.domain.usecases.GenerateTicketUseCase
 import com.sumitrack.android.domain.usecases.InstallmentSuggestion
+import com.sumitrack.android.domain.usecases.RegisterPaymentUseCase
 import com.sumitrack.android.ui.screens.clients.FakeClientDao
 import com.sumitrack.android.ui.screens.clients.FakeSaleDao
 import com.sumitrack.android.ui.screens.products.FakeTransactionRunner
@@ -47,6 +49,7 @@ class OrderDetailViewModelTest {
     private lateinit var clientRepository: ClientRepository
     private lateinit var settingsRepository: SettingsRepository
     private lateinit var generateTicketUseCase: GenerateTicketUseCase
+    private lateinit var registerPaymentUseCase: RegisterPaymentUseCase
     private lateinit var fakeBluetoothTicketPrinter: FakeBluetoothTicketPrinter
     private lateinit var fakeTicketFileWriter: FakeTicketFileWriter
 
@@ -63,6 +66,7 @@ class OrderDetailViewModelTest {
         clientRepository = ClientRepository(fakeClientDao, CalculateClientBalanceUseCase(saleRepository))
         settingsRepository = SettingsRepository(FakeSettingsDao(), noOpApiService)
         generateTicketUseCase = GenerateTicketUseCase(saleRepository, clientRepository, settingsRepository)
+        registerPaymentUseCase = RegisterPaymentUseCase(saleRepository)
         fakeBluetoothTicketPrinter = FakeBluetoothTicketPrinter()
         fakeTicketFileWriter = FakeTicketFileWriter()
     }
@@ -77,10 +81,22 @@ class OrderDetailViewModelTest {
         saleRepository = saleRepository,
         clientRepository = clientRepository,
         generateTicketUseCase = generateTicketUseCase,
+        registerPaymentUseCase = registerPaymentUseCase,
         bluetoothTicketPrinter = fakeBluetoothTicketPrinter,
         ticketFileWriter = fakeTicketFileWriter,
         tenantId = flowOf(tenantId),
     )
+
+    private fun seedPendingSingleSale(saleId: String = "s1", total: BigDecimal = BigDecimal("100.00")) {
+        fakeSaleDao.setSales(
+            listOf(
+                SaleEntity(
+                    id = saleId, fkTenant = "tenant-1", fkClient = "client-1", folio = "A1", total = total,
+                    status = "pending", createdAt = Instant.now(), updatedAt = Instant.now(), syncStatus = "pending",
+                )
+            )
+        )
+    }
 
     private fun product(price: BigDecimal = BigDecimal("100.00"), taxRate: BigDecimal = BigDecimal.ZERO) = Product(
         id = "p1", fkTenant = "tenant-1", name = "Refresco", price = price, taxRate = taxRate, isActive = true,
@@ -176,6 +192,7 @@ class OrderDetailViewModelTest {
             saleRepository = saleRepository,
             clientRepository = clientRepository,
             generateTicketUseCase = generateTicketUseCase,
+            registerPaymentUseCase = registerPaymentUseCase,
             bluetoothTicketPrinter = fakeBluetoothTicketPrinter,
             ticketFileWriter = fakeTicketFileWriter,
             tenantId = flowOf("tenant-2"),
@@ -324,5 +341,106 @@ class OrderDetailViewModelTest {
         vm.onCancelPlaceholderShown()
 
         assertEquals(null, vm.uiState.value.cancelPlaceholderMessage)
+    }
+
+    @Test
+    fun `onRegisterPaymentClick with null opens the dialog targeting the single payment`() = runTest {
+        seedPendingSingleSale()
+        val vm = viewModel("s1")
+        advanceUntilIdle()
+
+        vm.onRegisterPaymentClick(null)
+
+        assertTrue(vm.uiState.value.showRegisterPaymentDialog)
+        assertEquals(null, vm.uiState.value.paymentTargetInstallmentId)
+    }
+
+    @Test
+    fun `onRegisterPaymentClick with an installmentId opens the dialog targeting that installment`() = runTest {
+        val saleId = createInstallmentSale()
+        val vm = viewModel(saleId)
+        advanceUntilIdle()
+        val installmentId = vm.uiState.value.installments.first().id
+
+        vm.onRegisterPaymentClick(installmentId)
+
+        assertTrue(vm.uiState.value.showRegisterPaymentDialog)
+        assertEquals(installmentId, vm.uiState.value.paymentTargetInstallmentId)
+    }
+
+    @Test
+    fun `onRegisterPaymentDialogDismiss closes the dialog and clears the target`() = runTest {
+        seedPendingSingleSale()
+        val vm = viewModel("s1")
+        advanceUntilIdle()
+        vm.onRegisterPaymentClick(null)
+
+        vm.onRegisterPaymentDialogDismiss()
+
+        assertFalse(vm.uiState.value.showRegisterPaymentDialog)
+        assertEquals(null, vm.uiState.value.paymentTargetInstallmentId)
+    }
+
+    @Test
+    fun `onConfirmRegisterPayment success for a single-payment sale reloads status to PAID and closes the dialog`() = runTest {
+        seedPendingSingleSale(total = BigDecimal("100.00"))
+        val vm = viewModel("s1")
+        advanceUntilIdle()
+        vm.onRegisterPaymentClick(null)
+
+        vm.onConfirmRegisterPayment(PaymentMethodType.EFECTIVO)
+        advanceUntilIdle()
+
+        assertEquals(SaleStatus.PAID, vm.uiState.value.status)
+        assertEquals(1, vm.uiState.value.paymentHistory.size)
+        assertFalse(vm.uiState.value.showRegisterPaymentDialog)
+        assertFalse(vm.uiState.value.isRegisteringPayment)
+    }
+
+    @Test
+    fun `onConfirmRegisterPayment success for an installment reloads its status and the sale status`() = runTest {
+        val saleId = createInstallmentSale()
+        val vm = viewModel(saleId)
+        advanceUntilIdle()
+        val installmentId = vm.uiState.value.installments.first().id
+        vm.onRegisterPaymentClick(installmentId)
+
+        vm.onConfirmRegisterPayment(PaymentMethodType.TRANSFERENCIA)
+        advanceUntilIdle()
+
+        assertEquals(SaleStatus.PARTIAL, vm.uiState.value.status)
+        assertEquals(InstallmentUiStatus.PAID, vm.uiState.value.installments.first { it.id == installmentId }.toUiStatus())
+        assertFalse(vm.uiState.value.showRegisterPaymentDialog)
+    }
+
+    @Test
+    fun `onConfirmRegisterPayment failure sets an error message and keeps the dialog open`() = runTest {
+        seedPendingSingleSale()
+        val vm = viewModel("s1")
+        advanceUntilIdle()
+        vm.onRegisterPaymentClick(null)
+        // Cancelamos la venta directamente en el DAO para forzar el fallo de validación del use case.
+        fakeSaleDao.setSales(listOf(fakeSaleDao.getById("s1", "tenant-1")!!.copy(status = "cancelled")))
+
+        vm.onConfirmRegisterPayment(PaymentMethodType.EFECTIVO)
+        advanceUntilIdle()
+
+        assertEquals("No se pudo registrar el cobro. Inténtalo de nuevo.", vm.uiState.value.registerPaymentError)
+        assertTrue(vm.uiState.value.showRegisterPaymentDialog)
+        assertFalse(vm.uiState.value.isRegisteringPayment)
+    }
+
+    @Test
+    fun `onConfirmRegisterPayment is protected against double-tap by isRegisteringPayment`() = runTest {
+        seedPendingSingleSale()
+        val vm = viewModel("s1")
+        advanceUntilIdle()
+        vm.onRegisterPaymentClick(null)
+
+        vm.onConfirmRegisterPayment(PaymentMethodType.EFECTIVO)
+        vm.onConfirmRegisterPayment(PaymentMethodType.EFECTIVO)
+        advanceUntilIdle()
+
+        assertEquals(1, vm.uiState.value.paymentHistory.size)
     }
 }

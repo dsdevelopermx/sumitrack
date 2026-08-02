@@ -12,9 +12,11 @@ import com.sumitrack.android.domain.models.InstallmentStatus
 import com.sumitrack.android.domain.models.Payment
 import com.sumitrack.android.domain.models.SaleItem
 import com.sumitrack.android.domain.models.SaleStatus
+import com.sumitrack.android.domain.models.PaymentMethodType
 import com.sumitrack.android.domain.models.TicketData
 import com.sumitrack.android.domain.models.TicketPaymentCondition
 import com.sumitrack.android.domain.usecases.GenerateTicketUseCase
+import com.sumitrack.android.domain.usecases.RegisterPaymentUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -62,6 +64,10 @@ data class OrderDetailUiState(
     val isSharing: Boolean = false,
     val printError: String? = null,
     val cancelPlaceholderMessage: String? = null,
+    val showRegisterPaymentDialog: Boolean = false,
+    val paymentTargetInstallmentId: String? = null,
+    val isRegisteringPayment: Boolean = false,
+    val registerPaymentError: String? = null,
 )
 
 @HiltViewModel
@@ -70,6 +76,7 @@ class OrderDetailViewModel @Inject constructor(
     private val saleRepository: SaleRepository,
     private val clientRepository: ClientRepository,
     private val generateTicketUseCase: GenerateTicketUseCase,
+    private val registerPaymentUseCase: RegisterPaymentUseCase,
     private val bluetoothTicketPrinter: BluetoothTicketPrinter,
     private val ticketFileWriter: TicketFileWriter,
     @TenantId private val tenantId: Flow<String?>,
@@ -92,33 +99,83 @@ class OrderDetailViewModel @Inject constructor(
                 _uiState.update { it.copy(isLoading = false, notFound = true) }
                 return@launch
             }
-            val detail = runCatching { saleRepository.getSaleDetail(saleId, tenant) }.getOrNull()
-            if (detail == null) {
-                _uiState.update { it.copy(isLoading = false, notFound = true) }
+            loadOrder(tenant)
+        }
+    }
+
+    // Extraída de init (Historia 3.5) para reutilizarse tras un cobro exitoso (Historia 3.6) — el
+    // ViewModel no tiene ningún Flow reactivo sobre SaleDetail, así que recargar es la única forma
+    // de reflejar el nuevo estado de la parcialidad/venta y el historial de cobros actualizado.
+    private suspend fun loadOrder(tenant: String) {
+        val detail = runCatching { saleRepository.getSaleDetail(saleId, tenant) }.getOrNull()
+        if (detail == null) {
+            _uiState.update { it.copy(isLoading = false, notFound = true) }
+            return
+        }
+        val client = runCatching { clientRepository.getClientById(detail.sale.fkClient) }.getOrNull()
+        val paymentCondition = if (detail.installments.isEmpty()) {
+            TicketPaymentCondition.SinglePayment(detail.payments.firstOrNull()?.paidAt ?: detail.sale.createdAt)
+        } else {
+            TicketPaymentCondition.InstallmentPlan(detail.installments.sortedBy { it.dueDate })
+        }
+        _uiState.update {
+            it.copy(
+                isLoading = false,
+                notFound = false,
+                folio = detail.sale.folio,
+                createdAt = detail.sale.createdAt,
+                clientName = client?.name.orEmpty(),
+                status = detail.sale.status,
+                items = detail.items,
+                subtotal = detail.sale.subtotal,
+                tax = detail.sale.tax,
+                total = detail.sale.total,
+                paymentCondition = paymentCondition,
+                installments = detail.installments.sortedBy { it.dueDate },
+                paymentHistory = detail.payments.sortedByDescending { it.paidAt },
+            )
+        }
+    }
+
+    // paymentTargetInstallmentId solo tiene significado cuando showRegisterPaymentDialog == true
+    // (null en ese caso = cobro de venta de pago único, no "sin dialog abierto") — el booleano
+    // dedicado decide si el dialog está abierto, no la nulidad de este campo.
+    fun onRegisterPaymentClick(installmentId: String?) {
+        _uiState.update {
+            it.copy(showRegisterPaymentDialog = true, paymentTargetInstallmentId = installmentId, registerPaymentError = null)
+        }
+    }
+
+    fun onRegisterPaymentDialogDismiss() {
+        _uiState.update { it.copy(showRegisterPaymentDialog = false, paymentTargetInstallmentId = null, registerPaymentError = null) }
+    }
+
+    fun onConfirmRegisterPayment(method: PaymentMethodType) {
+        if (_uiState.value.isRegisteringPayment) return
+        _uiState.update { it.copy(isRegisteringPayment = true, registerPaymentError = null) }
+        viewModelScope.launch {
+            val tenant = tenantId.first()
+            // runCatching: si registerPaymentUseCase lanza (fallo de DB/transacción), sin esto la
+            // corrutina moría sin resetear isRegisteringPayment, dejando el dialog atascado sin
+            // forma de reintentar ni cancelar (Review Finding).
+            val success = tenant != null && runCatching {
+                registerPaymentUseCase(
+                    tenantId = tenant,
+                    saleId = saleId,
+                    installmentId = _uiState.value.paymentTargetInstallmentId,
+                    method = method,
+                )
+            }.getOrDefault(false)
+            if (!success) {
+                _uiState.update {
+                    it.copy(isRegisteringPayment = false, registerPaymentError = "No se pudo registrar el cobro. Inténtalo de nuevo.")
+                }
                 return@launch
             }
-            val client = runCatching { clientRepository.getClientById(detail.sale.fkClient) }.getOrNull()
-            val paymentCondition = if (detail.installments.isEmpty()) {
-                TicketPaymentCondition.SinglePayment(detail.payments.firstOrNull()?.paidAt ?: detail.sale.createdAt)
-            } else {
-                TicketPaymentCondition.InstallmentPlan(detail.installments.sortedBy { it.dueDate })
-            }
             _uiState.update {
-                it.copy(
-                    isLoading = false,
-                    folio = detail.sale.folio,
-                    createdAt = detail.sale.createdAt,
-                    clientName = client?.name.orEmpty(),
-                    status = detail.sale.status,
-                    items = detail.items,
-                    subtotal = detail.sale.subtotal,
-                    tax = detail.sale.tax,
-                    total = detail.sale.total,
-                    paymentCondition = paymentCondition,
-                    installments = detail.installments.sortedBy { it.dueDate },
-                    paymentHistory = detail.payments.sortedByDescending { it.paidAt },
-                )
+                it.copy(isRegisteringPayment = false, showRegisterPaymentDialog = false, paymentTargetInstallmentId = null)
             }
+            tenant?.let { loadOrder(it) }
         }
     }
 
