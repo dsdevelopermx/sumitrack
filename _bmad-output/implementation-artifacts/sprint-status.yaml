@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-06-27
-last_updated: 2026-08-04  # updated: 3-7 → done, epic-3 → done (code review completo, 291 tests)
+last_updated: 2026-08-04  # updated: epic-3-retrospective → done
 project: sumitrack
 project_key: NOKEY
 tracking_system: file-system
@@ -67,7 +67,7 @@ development_status:
   3-5-detalle-de-orden-e-historial-de-cobros: done
   3-6-registro-de-cobros-sobre-ventas-y-parcialidades: done
   3-7-credito-a-favor-y-cancelacion-de-venta-con-cobros: done
-  epic-3-retrospective: optional
+  epic-3-retrospective: done
 
   # ─── Epic 4: Sincronización Offline y Resolución de Conflictos ───
   epic-4: backlog
