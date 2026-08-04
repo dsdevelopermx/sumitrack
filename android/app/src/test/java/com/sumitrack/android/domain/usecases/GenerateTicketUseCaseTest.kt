@@ -14,6 +14,7 @@ import com.sumitrack.android.domain.models.SyncStatus
 import com.sumitrack.android.domain.models.TicketPaymentCondition
 import com.sumitrack.android.ui.screens.clients.FakeClientDao
 import com.sumitrack.android.ui.screens.clients.FakeSaleDao
+import com.sumitrack.android.ui.screens.orders.FakeCreditBalanceDao
 import com.sumitrack.android.ui.screens.orders.FakeInstallmentDao
 import com.sumitrack.android.ui.screens.orders.FakePaymentDao
 import com.sumitrack.android.ui.screens.orders.FakeSaleItemDao
@@ -43,7 +44,7 @@ class GenerateTicketUseCaseTest {
 
     @Before
     fun setUp() {
-        saleRepository = SaleRepository(FakeTransactionRunner(), FakeSaleDao(), FakeSaleItemDao(), FakeInstallmentDao(), FakePaymentDao())
+        saleRepository = SaleRepository(FakeTransactionRunner(), FakeSaleDao(), FakeSaleItemDao(), FakeInstallmentDao(), FakePaymentDao(), FakeCreditBalanceDao())
         fakeClientDao = FakeClientDao()
         clientRepository = ClientRepository(fakeClientDao, CalculateClientBalanceUseCase(saleRepository))
         fakeSettingsDao = FakeSettingsDao()

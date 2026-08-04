@@ -15,6 +15,7 @@ import com.sumitrack.android.domain.models.SaleStatus
 import com.sumitrack.android.domain.models.SyncStatus
 import com.sumitrack.android.domain.models.TicketPaymentCondition
 import com.sumitrack.android.domain.usecases.CalculateClientBalanceUseCase
+import com.sumitrack.android.domain.usecases.CancelSaleUseCase
 import com.sumitrack.android.domain.usecases.GenerateTicketUseCase
 import com.sumitrack.android.domain.usecases.InstallmentSuggestion
 import com.sumitrack.android.domain.usecases.RegisterPaymentUseCase
@@ -50,6 +51,7 @@ class OrderDetailViewModelTest {
     private lateinit var settingsRepository: SettingsRepository
     private lateinit var generateTicketUseCase: GenerateTicketUseCase
     private lateinit var registerPaymentUseCase: RegisterPaymentUseCase
+    private lateinit var cancelSaleUseCase: CancelSaleUseCase
     private lateinit var fakeBluetoothTicketPrinter: FakeBluetoothTicketPrinter
     private lateinit var fakeTicketFileWriter: FakeTicketFileWriter
 
@@ -61,12 +63,13 @@ class OrderDetailViewModelTest {
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         fakeSaleDao = FakeSaleDao()
-        saleRepository = SaleRepository(FakeTransactionRunner(), fakeSaleDao, FakeSaleItemDao(), FakeInstallmentDao(), FakePaymentDao())
+        saleRepository = SaleRepository(FakeTransactionRunner(), fakeSaleDao, FakeSaleItemDao(), FakeInstallmentDao(), FakePaymentDao(), FakeCreditBalanceDao())
         fakeClientDao = FakeClientDao()
         clientRepository = ClientRepository(fakeClientDao, CalculateClientBalanceUseCase(saleRepository))
         settingsRepository = SettingsRepository(FakeSettingsDao(), noOpApiService)
         generateTicketUseCase = GenerateTicketUseCase(saleRepository, clientRepository, settingsRepository)
         registerPaymentUseCase = RegisterPaymentUseCase(saleRepository)
+        cancelSaleUseCase = CancelSaleUseCase(saleRepository)
         fakeBluetoothTicketPrinter = FakeBluetoothTicketPrinter()
         fakeTicketFileWriter = FakeTicketFileWriter()
     }
@@ -82,6 +85,7 @@ class OrderDetailViewModelTest {
         clientRepository = clientRepository,
         generateTicketUseCase = generateTicketUseCase,
         registerPaymentUseCase = registerPaymentUseCase,
+        cancelSaleUseCase = cancelSaleUseCase,
         bluetoothTicketPrinter = fakeBluetoothTicketPrinter,
         ticketFileWriter = fakeTicketFileWriter,
         tenantId = flowOf(tenantId),
@@ -193,6 +197,7 @@ class OrderDetailViewModelTest {
             clientRepository = clientRepository,
             generateTicketUseCase = generateTicketUseCase,
             registerPaymentUseCase = registerPaymentUseCase,
+            cancelSaleUseCase = cancelSaleUseCase,
             bluetoothTicketPrinter = fakeBluetoothTicketPrinter,
             ticketFileWriter = fakeTicketFileWriter,
             tenantId = flowOf("tenant-2"),
@@ -317,20 +322,35 @@ class OrderDetailViewModelTest {
     }
 
     @Test
-    fun `onCancelOrderConfirm sets the exact placeholder message`() = runTest {
-        val clientId = clientRepository.createClient("Ana López", "555-0001", null, null, null, "tenant-1")
-        advanceUntilIdle()
-        val saleId = createImmediateSale(clientId)
+    fun `onCancelOrderConfirm cancels directly when the sale has no payments`() = runTest {
+        val saleId = createInstallmentSale() // Installments mode: sin Payment todavía
         val vm = viewModel(saleId)
         advanceUntilIdle()
 
         vm.onCancelOrderConfirm()
+        advanceUntilIdle()
 
-        assertEquals("Cancelación de orden — disponible próximamente", vm.uiState.value.cancelPlaceholderMessage)
+        assertFalse(vm.uiState.value.showCreditChoiceDialog)
+        assertEquals(SaleStatus.CANCELLED, vm.uiState.value.status)
+        assertEquals("Orden cancelada.", vm.uiState.value.cancelSuccessMessage)
     }
 
     @Test
-    fun `onCancelPlaceholderShown clears the placeholder message`() = runTest {
+    fun `onCancelOrderConfirm shows the credit-choice dialog when the sale has payments`() = runTest {
+        val clientId = clientRepository.createClient("Ana López", "555-0001", null, null, null, "tenant-1")
+        advanceUntilIdle()
+        val saleId = createImmediateSale(clientId) // Immediate: siempre paid, con Payment
+        val vm = viewModel(saleId)
+        advanceUntilIdle()
+
+        vm.onCancelOrderConfirm()
+
+        assertTrue(vm.uiState.value.showCreditChoiceDialog)
+        assertEquals(SaleStatus.PAID, vm.uiState.value.status) // aún no cancelada, solo se mostró el dialog
+    }
+
+    @Test
+    fun `onCreditChoiceDialogDismiss closes the dialog without cancelling`() = runTest {
         val clientId = clientRepository.createClient("Ana López", "555-0001", null, null, null, "tenant-1")
         advanceUntilIdle()
         val saleId = createImmediateSale(clientId)
@@ -338,9 +358,88 @@ class OrderDetailViewModelTest {
         advanceUntilIdle()
         vm.onCancelOrderConfirm()
 
-        vm.onCancelPlaceholderShown()
+        vm.onCreditChoiceDialogDismiss()
 
-        assertEquals(null, vm.uiState.value.cancelPlaceholderMessage)
+        assertFalse(vm.uiState.value.showCreditChoiceDialog)
+        assertEquals(SaleStatus.PAID, vm.uiState.value.status)
+    }
+
+    @Test
+    fun `onCancelKeepingPayments (Opcion A) cancels without generating credit`() = runTest {
+        val clientId = clientRepository.createClient("Ana López", "555-0001", null, null, null, "tenant-1")
+        advanceUntilIdle()
+        val saleId = createImmediateSale(clientId, price = BigDecimal("100.00"))
+        val vm = viewModel(saleId)
+        advanceUntilIdle()
+        vm.onCancelOrderConfirm()
+
+        vm.onCancelKeepingPayments()
+        advanceUntilIdle()
+
+        assertFalse(vm.uiState.value.showCreditChoiceDialog)
+        assertEquals(SaleStatus.CANCELLED, vm.uiState.value.status)
+        assertEquals(BigDecimal.ZERO, saleRepository.getAvailableCredit(clientId, "tenant-1"))
+    }
+
+    @Test
+    fun `onCancelWithCredit (Opcion B) cancels and generates credit for the total collected`() = runTest {
+        val clientId = clientRepository.createClient("Ana López", "555-0001", null, null, null, "tenant-1")
+        advanceUntilIdle()
+        val saleId = createImmediateSale(clientId, price = BigDecimal("100.00"))
+        val vm = viewModel(saleId)
+        advanceUntilIdle()
+        vm.onCancelOrderConfirm()
+
+        vm.onCancelWithCredit()
+        advanceUntilIdle()
+
+        assertEquals(SaleStatus.CANCELLED, vm.uiState.value.status)
+        assertEquals(BigDecimal("100.00"), saleRepository.getAvailableCredit(clientId, "tenant-1"))
+        assertEquals("Orden cancelada. Se generó Crédito a Favor para el cliente.", vm.uiState.value.cancelSuccessMessage)
+    }
+
+    @Test
+    fun `cancelling a sale with installments marks the pending ones CANCELLED, not the paid ones`() = runTest {
+        val saleId = createInstallmentSale()
+        val vm = viewModel(saleId)
+        advanceUntilIdle()
+        val installmentId = vm.uiState.value.installments.first().id
+        vm.onRegisterPaymentClick(installmentId)
+        vm.onConfirmRegisterPayment(PaymentMethodType.EFECTIVO)
+        advanceUntilIdle()
+
+        vm.onCancelOrderConfirm() // tiene 1 cobro → muestra el dialog
+        vm.onCancelKeepingPayments()
+        advanceUntilIdle()
+
+        val statuses = vm.uiState.value.installments.map { it.toUiStatus() }
+        assertTrue(InstallmentUiStatus.PAID in statuses)
+        assertTrue(InstallmentUiStatus.CANCELLED in statuses)
+    }
+
+    @Test
+    fun `performCancel failure sets cancelError and does not leave isCancelling stuck`() = runTest {
+        val vm = viewModel("does-not-exist")
+        advanceUntilIdle()
+
+        vm.onCancelOrderConfirm() // notFound: paymentHistory vacío → cancela directo, use case falla
+        advanceUntilIdle()
+
+        assertEquals("No se pudo cancelar la orden. Inténtalo de nuevo.", vm.uiState.value.cancelError)
+        assertFalse(vm.uiState.value.isCancelling)
+    }
+
+    @Test
+    fun `onCancelSuccessMessageShown clears the success message`() = runTest {
+        val saleId = createInstallmentSale()
+        val vm = viewModel(saleId)
+        advanceUntilIdle()
+        vm.onCancelOrderConfirm()
+        advanceUntilIdle()
+
+        vm.onCancelSuccessMessageShown()
+
+        assertEquals(null, vm.uiState.value.cancelSuccessMessage)
     }
 
     @Test

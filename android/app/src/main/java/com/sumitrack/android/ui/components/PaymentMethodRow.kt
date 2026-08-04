@@ -51,7 +51,11 @@ fun PaymentMethodRow(
                 modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
             )
             ExposedDropdownMenu(expanded = dropdownExpanded, onDismissRequest = { dropdownExpanded = false }) {
-                PaymentMethodType.entries.forEach { option ->
+                // Crédito a Favor se excluye aquí: solo se agrega mediante el botón "Aplicar" del
+                // chip en PaymentScreen (onApplyCreditClick), que lo capa a min(disponible,
+                // restante) y evita duplicados. Seleccionarlo manualmente aquí permitía escribir
+                // cualquier monto sin relación con el crédito real del cliente (Review Finding).
+                PaymentMethodType.entries.filterNot { it == PaymentMethodType.CREDITO_A_FAVOR }.forEach { option ->
                     DropdownMenuItem(
                         text = { Text(paymentMethodLabel(option)) },
                         onClick = {
@@ -78,4 +82,5 @@ private fun paymentMethodLabel(type: PaymentMethodType): String = when (type) {
     PaymentMethodType.EFECTIVO -> "Efectivo"
     PaymentMethodType.TRANSFERENCIA -> "Transferencia"
     PaymentMethodType.TARJETA -> "Tarjeta"
+    PaymentMethodType.CREDITO_A_FAVOR -> "Crédito a Favor"
 }

@@ -2,10 +2,13 @@ package com.sumitrack.android.ui.screens.clients
 
 import androidx.lifecycle.SavedStateHandle
 import com.sumitrack.android.data.local.entities.ClientEntity
+import com.sumitrack.android.data.local.entities.CreditBalanceEntity
 import com.sumitrack.android.data.local.entities.SaleEntity
 import com.sumitrack.android.data.repositories.ClientRepository
 import com.sumitrack.android.data.repositories.SaleRepository
+import com.sumitrack.android.domain.usecases.CalculateAvailableCreditUseCase
 import com.sumitrack.android.domain.usecases.CalculateClientBalanceUseCase
+import com.sumitrack.android.ui.screens.orders.FakeCreditBalanceDao
 import com.sumitrack.android.ui.screens.orders.FakeInstallmentDao
 import com.sumitrack.android.ui.screens.orders.FakePaymentDao
 import com.sumitrack.android.ui.screens.orders.FakeSaleItemDao
@@ -33,16 +36,20 @@ class ClientProfileViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
     private lateinit var fakeClientDao: FakeClientDao
     private lateinit var fakeSaleDao: FakeSaleDao
+    private lateinit var fakeCreditBalanceDao: FakeCreditBalanceDao
     private lateinit var clientRepository: ClientRepository
     private lateinit var saleRepository: SaleRepository
+    private lateinit var calculateAvailableCreditUseCase: CalculateAvailableCreditUseCase
 
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         fakeClientDao = FakeClientDao()
         fakeSaleDao = FakeSaleDao()
-        saleRepository = SaleRepository(FakeTransactionRunner(), fakeSaleDao, FakeSaleItemDao(), FakeInstallmentDao(), FakePaymentDao())
+        fakeCreditBalanceDao = FakeCreditBalanceDao()
+        saleRepository = SaleRepository(FakeTransactionRunner(), fakeSaleDao, FakeSaleItemDao(), FakeInstallmentDao(), FakePaymentDao(), fakeCreditBalanceDao)
         clientRepository = ClientRepository(fakeClientDao, CalculateClientBalanceUseCase(saleRepository))
+        calculateAvailableCreditUseCase = CalculateAvailableCreditUseCase(saleRepository)
     }
 
     @After
@@ -76,6 +83,7 @@ class ClientProfileViewModelTest {
         SavedStateHandle(mapOf("clientId" to clientId)),
         clientRepository,
         saleRepository,
+        calculateAvailableCreditUseCase,
     )
 
     @Test
@@ -152,5 +160,34 @@ class ClientProfileViewModelTest {
         advanceUntilIdle()
 
         assertEquals("Nombre Actualizado", vm.uiState.value.client!!.name)
+    }
+
+    @Test
+    fun `creditBalance loads alongside client and openSales`() = runTest {
+        fakeClientDao.setClients(listOf(clientEntity("client-1")))
+        fakeCreditBalanceDao.upsertAll(
+            listOf(
+                CreditBalanceEntity(
+                    id = "c1", fkTenant = "tenant-1", fkClient = "client-1", amount = BigDecimal("200.00"),
+                    origin = "cancellation", fkOriginSale = null, appliedAt = null,
+                    createdAt = Instant.now(), updatedAt = Instant.now(), syncStatus = "pending",
+                )
+            )
+        )
+
+        val vm = viewModel("client-1")
+        advanceUntilIdle()
+
+        assertEquals(BigDecimal("200.00"), vm.uiState.value.creditBalance)
+    }
+
+    @Test
+    fun `creditBalance is zero for a client with no credit`() = runTest {
+        fakeClientDao.setClients(listOf(clientEntity("client-1")))
+
+        val vm = viewModel("client-1")
+        advanceUntilIdle()
+
+        assertEquals(BigDecimal.ZERO, vm.uiState.value.creditBalance)
     }
 }

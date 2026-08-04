@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import com.sumitrack.android.data.repositories.ClientRepository
 import com.sumitrack.android.data.repositories.SaleRepository
 import com.sumitrack.android.domain.usecases.CalculateClientBalanceUseCase
+import com.sumitrack.android.ui.screens.orders.FakeCreditBalanceDao
 import com.sumitrack.android.ui.screens.orders.FakeInstallmentDao
 import com.sumitrack.android.ui.screens.orders.FakePaymentDao
 import com.sumitrack.android.ui.screens.orders.FakeSaleItemDao
@@ -38,7 +39,7 @@ class ClientFormViewModelTest {
         repository = ClientRepository(
             fakeDao,
             CalculateClientBalanceUseCase(
-                SaleRepository(FakeTransactionRunner(), FakeSaleDao(), FakeSaleItemDao(), FakeInstallmentDao(), FakePaymentDao())
+                SaleRepository(FakeTransactionRunner(), FakeSaleDao(), FakeSaleItemDao(), FakeInstallmentDao(), FakePaymentDao(), FakeCreditBalanceDao())
             ),
         )
     }

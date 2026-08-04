@@ -7,6 +7,7 @@ import com.sumitrack.android.data.local.RoomTransactionRunner
 import com.sumitrack.android.data.local.SumitrackDatabase
 import com.sumitrack.android.data.local.TransactionRunner
 import com.sumitrack.android.data.local.dao.ClientDao
+import com.sumitrack.android.data.local.dao.CreditBalanceDao
 import com.sumitrack.android.data.local.dao.InstallmentDao
 import com.sumitrack.android.data.local.dao.PaymentDao
 import com.sumitrack.android.data.local.dao.ProductDao
@@ -63,6 +64,10 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun providePaymentDao(db: SumitrackDatabase): PaymentDao = db.paymentDao()
+
+    @Provides
+    @Singleton
+    fun provideCreditBalanceDao(db: SumitrackDatabase): CreditBalanceDao = db.creditBalanceDao()
 
     @Provides
     @Singleton

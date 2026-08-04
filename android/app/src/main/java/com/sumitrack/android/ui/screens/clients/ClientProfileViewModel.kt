@@ -7,7 +7,9 @@ import com.sumitrack.android.data.repositories.ClientRepository
 import com.sumitrack.android.data.repositories.SaleRepository
 import com.sumitrack.android.domain.models.Client
 import com.sumitrack.android.domain.models.Sale
+import com.sumitrack.android.domain.usecases.CalculateAvailableCreditUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.math.BigDecimal
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,6 +23,7 @@ data class ClientProfileUiState(
     val client: Client? = null,
     val openSales: List<Sale> = emptyList(),
     val errorMessage: String? = null,
+    val creditBalance: BigDecimal? = null,
 )
 
 @HiltViewModel
@@ -28,6 +31,7 @@ class ClientProfileViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val clientRepository: ClientRepository,
     private val saleRepository: SaleRepository,
+    private val calculateAvailableCreditUseCase: CalculateAvailableCreditUseCase,
 ) : ViewModel() {
 
     private val clientId: String = checkNotNull(savedStateHandle["clientId"])
@@ -83,7 +87,18 @@ class ClientProfileViewModel @Inject constructor(
                 return@launch
             }
 
-            _uiState.value = ClientProfileUiState(isLoading = false, client = client, openSales = openSales)
+            // Mismo criterio try/catch(CancellationException) rethrow ya usado arriba para
+            // client/openSales — un fallo al cargar el crédito no debe bloquear el resto del
+            // perfil, el banner simplemente no se muestra (creditBalance = null).
+            val creditBalance = try {
+                calculateAvailableCreditUseCase(clientId, client.fkTenant)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                null
+            }
+
+            _uiState.value = ClientProfileUiState(isLoading = false, client = client, openSales = openSales, creditBalance = creditBalance)
         }
     }
 }

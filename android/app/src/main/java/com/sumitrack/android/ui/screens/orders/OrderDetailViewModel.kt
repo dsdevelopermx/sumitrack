@@ -15,6 +15,7 @@ import com.sumitrack.android.domain.models.SaleStatus
 import com.sumitrack.android.domain.models.PaymentMethodType
 import com.sumitrack.android.domain.models.TicketData
 import com.sumitrack.android.domain.models.TicketPaymentCondition
+import com.sumitrack.android.domain.usecases.CancelSaleUseCase
 import com.sumitrack.android.domain.usecases.GenerateTicketUseCase
 import com.sumitrack.android.domain.usecases.RegisterPaymentUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -37,9 +38,10 @@ import javax.inject.Inject
 // reloj del sistema, mismo criterio que CalculateInstallmentsUseCase (Historia 3.3).
 // No reutiliza SaleUiStatus/StatusBadge: ese enum describe el estado de una VENTA completa (4
 // valores, contexto S-02); "vencida" aquí es un concepto distinto a nivel de PARCIALIDAD individual.
-enum class InstallmentUiStatus { PENDING, PAID, OVERDUE }
+enum class InstallmentUiStatus { PENDING, PAID, OVERDUE, CANCELLED }
 
 fun Installment.toUiStatus(now: Instant = Instant.now()): InstallmentUiStatus = when {
+    status == InstallmentStatus.CANCELLED -> InstallmentUiStatus.CANCELLED
     status == InstallmentStatus.PAID -> InstallmentUiStatus.PAID
     dueDate.isBefore(now) -> InstallmentUiStatus.OVERDUE
     else -> InstallmentUiStatus.PENDING
@@ -63,11 +65,14 @@ data class OrderDetailUiState(
     val isPrinting: Boolean = false,
     val isSharing: Boolean = false,
     val printError: String? = null,
-    val cancelPlaceholderMessage: String? = null,
     val showRegisterPaymentDialog: Boolean = false,
     val paymentTargetInstallmentId: String? = null,
     val isRegisteringPayment: Boolean = false,
     val registerPaymentError: String? = null,
+    val showCreditChoiceDialog: Boolean = false,
+    val isCancelling: Boolean = false,
+    val cancelError: String? = null,
+    val cancelSuccessMessage: String? = null,
 )
 
 @HiltViewModel
@@ -77,6 +82,7 @@ class OrderDetailViewModel @Inject constructor(
     private val clientRepository: ClientRepository,
     private val generateTicketUseCase: GenerateTicketUseCase,
     private val registerPaymentUseCase: RegisterPaymentUseCase,
+    private val cancelSaleUseCase: CancelSaleUseCase,
     private val bluetoothTicketPrinter: BluetoothTicketPrinter,
     private val ticketFileWriter: TicketFileWriter,
     @TenantId private val tenantId: Flow<String?>,
@@ -252,11 +258,66 @@ class OrderDetailViewModel @Inject constructor(
         _uiState.update { it.copy(ticketData = null, printError = null) }
     }
 
+    // Sin cobros → cancela directo (AC-1). Con cobros → segundo dialog Opción A/Opción B (AC-2) antes
+    // de proceder, sin importar si el estado literal es PARTIAL o PAID (ver Dev Notes: "¿tiene
+    // cobros?" es el criterio real, FR-16 permite cancelar "independientemente de su Estatus").
     fun onCancelOrderConfirm() {
-        _uiState.update { it.copy(cancelPlaceholderMessage = "Cancelación de orden — disponible próximamente") }
+        if (_uiState.value.paymentHistory.isEmpty()) {
+            performCancel(generateCredit = false)
+        } else {
+            _uiState.update { it.copy(showCreditChoiceDialog = true) }
+        }
     }
 
-    fun onCancelPlaceholderShown() {
-        _uiState.update { it.copy(cancelPlaceholderMessage = null) }
+    fun onCreditChoiceDialogDismiss() {
+        _uiState.update { it.copy(showCreditChoiceDialog = false) }
+    }
+
+    // Opción A: acuerdo manual, los cobros quedan en historial sin generar Crédito a Favor.
+    fun onCancelKeepingPayments() {
+        _uiState.update { it.copy(showCreditChoiceDialog = false) }
+        performCancel(generateCredit = false)
+    }
+
+    // Opción B: genera Crédito a Favor por el total cobrado.
+    fun onCancelWithCredit() {
+        _uiState.update { it.copy(showCreditChoiceDialog = false) }
+        performCancel(generateCredit = true)
+    }
+
+    private fun performCancel(generateCredit: Boolean) {
+        if (_uiState.value.isCancelling) return
+        _uiState.update { it.copy(isCancelling = true, cancelError = null) }
+        viewModelScope.launch {
+            val tenant = tenantId.first()
+            // runCatching: mismo criterio que onConfirmRegisterPayment (Historia 3.6) — sin esto,
+            // una excepción de cancelSaleUseCase dejaría isCancelling atascado en true para siempre.
+            val success = tenant != null && runCatching {
+                cancelSaleUseCase(tenant, saleId, generateCredit)
+            }.getOrDefault(false)
+            if (!success) {
+                _uiState.update { it.copy(isCancelling = false, cancelError = "No se pudo cancelar la orden. Inténtalo de nuevo.") }
+                return@launch
+            }
+            _uiState.update {
+                it.copy(
+                    isCancelling = false,
+                    cancelSuccessMessage = if (generateCredit) {
+                        "Orden cancelada. Se generó Crédito a Favor para el cliente."
+                    } else {
+                        "Orden cancelada."
+                    },
+                )
+            }
+            tenant?.let { loadOrder(it) }
+        }
+    }
+
+    fun onCancelSuccessMessageShown() {
+        _uiState.update { it.copy(cancelSuccessMessage = null) }
+    }
+
+    fun onCancelErrorShown() {
+        _uiState.update { it.copy(cancelError = null) }
     }
 }

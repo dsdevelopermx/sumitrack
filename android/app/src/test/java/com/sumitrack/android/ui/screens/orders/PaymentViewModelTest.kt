@@ -1,6 +1,7 @@
 package com.sumitrack.android.ui.screens.orders
 
 import androidx.lifecycle.SavedStateHandle
+import com.sumitrack.android.data.local.entities.CreditBalanceEntity
 import com.sumitrack.android.data.local.entities.SettingsEntity
 import com.sumitrack.android.data.remote.api.SettingsApiService
 import com.sumitrack.android.data.remote.dto.SettingDto
@@ -10,6 +11,7 @@ import com.sumitrack.android.data.repositories.SaleRepository
 import com.sumitrack.android.data.repositories.SettingsRepository
 import com.sumitrack.android.domain.models.OrderDraftItem
 import com.sumitrack.android.domain.models.PaymentMethodType
+import com.sumitrack.android.domain.usecases.CalculateAvailableCreditUseCase
 import com.sumitrack.android.domain.usecases.CalculateClientBalanceUseCase
 import com.sumitrack.android.domain.usecases.CalculateInstallmentsUseCase
 import com.sumitrack.android.domain.usecases.GenerateTicketUseCase
@@ -20,6 +22,7 @@ import com.sumitrack.android.ui.screens.products.FakeProductDao
 import com.sumitrack.android.ui.screens.products.FakeProductVariantDao
 import com.sumitrack.android.ui.screens.products.FakeTransactionRunner
 import java.math.BigDecimal
+import java.time.Instant
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
@@ -49,9 +52,11 @@ class PaymentViewModelTest {
     private lateinit var clientRepository: ClientRepository
     private lateinit var validateFolioUseCase: ValidateFolioUseCase
     private lateinit var calculateInstallmentsUseCase: CalculateInstallmentsUseCase
+    private lateinit var calculateAvailableCreditUseCase: CalculateAvailableCreditUseCase
     private lateinit var generateTicketUseCase: GenerateTicketUseCase
     private lateinit var fakeBluetoothTicketPrinter: FakeBluetoothTicketPrinter
     private lateinit var fakeTicketFileWriter: FakeTicketFileWriter
+    private lateinit var fakeCreditBalanceDao: FakeCreditBalanceDao
 
     private val noOpApiService = object : SettingsApiService {
         override suspend fun getSettings(token: String): List<SettingDto> = emptyList()
@@ -64,10 +69,12 @@ class PaymentViewModelTest {
         fakeSettingsDao = FakeSettingsDao()
         settingsRepository = SettingsRepository(fakeSettingsDao, noOpApiService)
         fakeSaleDao = FakeSaleDao()
-        saleRepository = SaleRepository(FakeTransactionRunner(), fakeSaleDao, FakeSaleItemDao(), FakeInstallmentDao(), FakePaymentDao())
+        fakeCreditBalanceDao = FakeCreditBalanceDao()
+        saleRepository = SaleRepository(FakeTransactionRunner(), fakeSaleDao, FakeSaleItemDao(), FakeInstallmentDao(), FakePaymentDao(), fakeCreditBalanceDao)
         clientRepository = ClientRepository(FakeClientDao(), CalculateClientBalanceUseCase(saleRepository))
         validateFolioUseCase = ValidateFolioUseCase(fakeSaleDao, settingsRepository)
         calculateInstallmentsUseCase = CalculateInstallmentsUseCase()
+        calculateAvailableCreditUseCase = CalculateAvailableCreditUseCase(saleRepository)
         generateTicketUseCase = GenerateTicketUseCase(saleRepository, clientRepository, settingsRepository)
         fakeBluetoothTicketPrinter = FakeBluetoothTicketPrinter()
         fakeTicketFileWriter = FakeTicketFileWriter()
@@ -85,6 +92,7 @@ class PaymentViewModelTest {
         saleRepository = saleRepository,
         validateFolioUseCase = validateFolioUseCase,
         calculateInstallmentsUseCase = calculateInstallmentsUseCase,
+        calculateAvailableCreditUseCase = calculateAvailableCreditUseCase,
         generateTicketUseCase = generateTicketUseCase,
         bluetoothTicketPrinter = fakeBluetoothTicketPrinter,
         ticketFileWriter = fakeTicketFileWriter,
@@ -498,5 +506,59 @@ class PaymentViewModelTest {
         assertTrue(vm.uiState.value.ticketLoadFailed)
         assertFalse(vm.uiState.value.isSaving)
         job.cancel()
+    }
+
+    @Test
+    fun `availableCredit loads for the client on init`() = runTest {
+        fakeCreditBalanceDao.upsertAll(
+            listOf(
+                CreditBalanceEntity(
+                    id = "c1", fkTenant = "tenant-1", fkClient = "client-1", amount = BigDecimal("300.00"),
+                    origin = "cancellation", fkOriginSale = null, appliedAt = null,
+                    createdAt = Instant.now(), updatedAt = Instant.now(), syncStatus = "pending",
+                )
+            )
+        )
+        val cart = cartWithProduct(BigDecimal("100.00"))
+
+        val vm = viewModel(cart = cart)
+        advanceUntilIdle()
+
+        assertEquals(BigDecimal("300.00"), vm.uiState.value.availableCredit)
+    }
+
+    @Test
+    fun `onApplyCreditClick adds a CREDITO_A_FAVOR row capped at the remaining total, only once`() = runTest {
+        fakeCreditBalanceDao.upsertAll(
+            listOf(
+                CreditBalanceEntity(
+                    id = "c1", fkTenant = "tenant-1", fkClient = "client-1", amount = BigDecimal("300.00"),
+                    origin = "cancellation", fkOriginSale = null, appliedAt = null,
+                    createdAt = Instant.now(), updatedAt = Instant.now(), syncStatus = "pending",
+                )
+            )
+        )
+        val cart = cartWithProduct(BigDecimal("100.00"))
+        val vm = viewModel(cart = cart)
+        advanceUntilIdle()
+
+        vm.onApplyCreditClick()
+        vm.onApplyCreditClick() // segundo click no debe duplicar la fila
+
+        val creditMethods = vm.uiState.value.paymentMethods.filter { it.type == PaymentMethodType.CREDITO_A_FAVOR }
+        assertEquals(1, creditMethods.size)
+        assertEquals("100.00", creditMethods.first().amountText) // capado al total, no a los 300 disponibles
+        assertTrue(vm.uiState.value.isImmediateConfirmEnabled) // cubre el total exacto → Confirmar habilitado
+    }
+
+    @Test
+    fun `onApplyCreditClick does nothing when there is no available credit`() = runTest {
+        val cart = cartWithProduct(BigDecimal("100.00"))
+        val vm = viewModel(cart = cart)
+        advanceUntilIdle()
+
+        vm.onApplyCreditClick()
+
+        assertTrue(vm.uiState.value.paymentMethods.none { it.type == PaymentMethodType.CREDITO_A_FAVOR })
     }
 }

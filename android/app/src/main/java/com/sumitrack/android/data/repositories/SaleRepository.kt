@@ -2,11 +2,13 @@ package com.sumitrack.android.data.repositories
 
 import com.sumitrack.android.data.local.SearchNormalizer
 import com.sumitrack.android.data.local.TransactionRunner
+import com.sumitrack.android.data.local.dao.CreditBalanceDao
 import com.sumitrack.android.data.local.dao.InstallmentDao
 import com.sumitrack.android.data.local.dao.OrderSummaryRow
 import com.sumitrack.android.data.local.dao.PaymentDao
 import com.sumitrack.android.data.local.dao.SaleDao
 import com.sumitrack.android.data.local.dao.SaleItemDao
+import com.sumitrack.android.data.local.entities.CreditBalanceEntity
 import com.sumitrack.android.data.local.entities.InstallmentEntity
 import com.sumitrack.android.data.local.entities.PaymentEntity
 import com.sumitrack.android.data.local.entities.SaleEntity
@@ -45,6 +47,7 @@ class SaleRepository @Inject constructor(
     private val saleItemDao: SaleItemDao,
     private val installmentDao: InstallmentDao,
     private val paymentDao: PaymentDao,
+    private val creditBalanceDao: CreditBalanceDao,
 ) {
 
     suspend fun getOpenSalesForClient(clientId: String, tenantId: String): List<Sale> =
@@ -144,6 +147,35 @@ class SaleRepository @Inject constructor(
                     }
                 )
             }
+            // Historia 3.7 (AC-5/AC-6): un método CREDITO_A_FAVOR consume las filas de crédito del
+            // cliente FIFO (más antiguas primero, `id` como desempate determinista si comparten
+            // createdAt — Review Finding), reduciendo `amount` EN SITIO — nunca las borra ni las
+            // marca "aplicadas" de forma binaria, porque `amount` ya representa el remanente actual
+            // de esa fila (ver Dev Notes de la historia).
+            if (paymentConfig is PaymentConfig.Immediate) {
+                val creditUsed = paymentConfig.payments
+                    .filter { it.first == PaymentMethodType.CREDITO_A_FAVOR }
+                    .fold(BigDecimal.ZERO) { acc, (_, amount) -> acc + amount }
+                if (creditUsed > BigDecimal.ZERO) {
+                    val rows = creditBalanceDao.getForClient(clientId, tenantId).sortedWith(compareBy({ it.createdAt }, { it.id }))
+                    val available = rows.fold(BigDecimal.ZERO) { acc, r -> acc + r.amount }
+                    // Lanzar (no return@run) es intencional: una excepción SÍ revierte toda la
+                    // transacción (venta/ítems/pagos ya escritos en este mismo bloque), evitando que
+                    // una venta quede marcada "paid" con más crédito del que el cliente realmente
+                    // tiene (Review Finding — reportado independientemente por los 3 revisores).
+                    check(creditUsed <= available) { "Crédito a Favor insuficiente para cubrir el monto solicitado" }
+                    var remaining = creditUsed
+                    val updated = mutableListOf<CreditBalanceEntity>()
+                    for (row in rows) {
+                        if (remaining <= BigDecimal.ZERO) break
+                        val consume = row.amount.min(remaining)
+                        if (consume <= BigDecimal.ZERO) continue
+                        updated += row.copy(amount = row.amount - consume, appliedAt = now, updatedAt = now, syncStatus = "pending")
+                        remaining -= consume
+                    }
+                    if (updated.isNotEmpty()) creditBalanceDao.upsertAll(updated)
+                }
+            }
         }
         return sale.id
     }
@@ -207,6 +239,47 @@ class SaleRepository @Inject constructor(
             // syncStatus = "pending" — mismo criterio que createSale: cualquier fila local
             // modificada que deba subirse en la siguiente sincronización se marca pending.
             saleDao.upsertAll(listOf(sale.copy(status = newSaleStatus, updatedAt = paidAt, syncStatus = "pending")))
+        }
+    }
+
+    suspend fun getAvailableCredit(clientId: String, tenantId: String): BigDecimal =
+        creditBalanceDao.getForClient(clientId, tenantId).fold(BigDecimal.ZERO) { acc, row -> acc + row.amount }
+
+    // Historia 3.7 (AC-1, AC-2, AC-7): cancela la venta y todas sus parcialidades PENDING (las ya
+    // PAID/CANCELLED no se tocan); nunca borra ni modifica payments (AC-7). Si `creditAmount` no es
+    // null, otorga Crédito a Favor por ese monto en la MISMA transacción — evita el caso "venta
+    // cancelada pero el crédito nunca se generó" ante un fallo a mitad de operación.
+    suspend fun cancelSale(tenantId: String, saleId: String, creditAmount: BigDecimal?): Boolean {
+        return transactionRunner.run {
+            // La venta se busca ANTES de escribir nada, mismo criterio que registerPayment
+            // (Historia 3.6, corregido en su code review): un `return@run` normal no revierte lo
+            // ya escrito, así que validar primero evita escrituras huérfanas.
+            val sale = saleDao.getById(saleId, tenantId) ?: return@run false
+            val now = Instant.now()
+            val installments = installmentDao.getForSale(saleId, tenantId)
+            val toCancel = installments.filter { it.status == "pending" }
+                .map { it.copy(status = "cancelled", updatedAt = now, syncStatus = "pending") }
+            if (toCancel.isNotEmpty()) installmentDao.upsertAll(toCancel)
+            saleDao.upsertAll(listOf(sale.copy(status = "cancelled", updatedAt = now, syncStatus = "pending")))
+            if (creditAmount != null && creditAmount > BigDecimal.ZERO) {
+                creditBalanceDao.upsertAll(
+                    listOf(
+                        CreditBalanceEntity(
+                            id = UUID.randomUUID().toString(),
+                            fkTenant = tenantId,
+                            fkClient = sale.fkClient,
+                            amount = creditAmount,
+                            origin = "cancellation",
+                            fkOriginSale = saleId,
+                            appliedAt = null,
+                            createdAt = now,
+                            updatedAt = now,
+                            syncStatus = "pending",
+                        )
+                    )
+                )
+            }
+            true
         }
     }
 

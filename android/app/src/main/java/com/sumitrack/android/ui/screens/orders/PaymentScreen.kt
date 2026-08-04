@@ -31,7 +31,9 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
@@ -53,6 +55,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sumitrack.android.domain.models.InstallmentPeriodicity
 import com.sumitrack.android.domain.models.PaymentMethodType
 import com.sumitrack.android.ui.components.PaymentMethodRow
+import com.sumitrack.android.ui.theme.SyncOk
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.Instant
@@ -154,10 +157,12 @@ fun PaymentScreen(
                     paymentMethods = uiState.paymentMethods,
                     remaining = uiState.remaining,
                     isConfirmEnabled = uiState.isImmediateConfirmEnabled,
+                    availableCredit = uiState.availableCredit,
                     onTypeChange = viewModel::onPaymentMethodTypeChange,
                     onAmountChange = viewModel::onPaymentMethodAmountChange,
                     onRemove = viewModel::onRemovePaymentMethod,
                     onAddMethod = viewModel::onAddPaymentMethod,
+                    onApplyCredit = viewModel::onApplyCreditClick,
                     onConfirm = viewModel::onConfirmClick,
                 )
                 PaymentMode.INSTALLMENTS -> InstallmentsSection(
@@ -219,13 +224,38 @@ private fun ImmediatePaymentSection(
     paymentMethods: List<PaymentMethodDraft>,
     remaining: BigDecimal,
     isConfirmEnabled: Boolean,
+    availableCredit: BigDecimal,
     onTypeChange: (String, PaymentMethodType) -> Unit,
     onAmountChange: (String, String) -> Unit,
     onRemove: (String) -> Unit,
     onAddMethod: () -> Unit,
+    onApplyCredit: () -> Unit,
     onConfirm: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) {
+        // Mismo texto ya establecido en ClientProfileScreen.kt/EXPERIENCE.md para Crédito a
+        // Favor — solo visible si hay crédito disponible y todavía no se aplicó a esta venta.
+        if (availableCredit > BigDecimal.ZERO && paymentMethods.none { it.type == PaymentMethodType.CREDITO_A_FAVOR }) {
+            Surface(
+                color = SyncOk.copy(alpha = 0.12f),
+                shape = MaterialTheme.shapes.medium,
+                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth().padding(12.dp),
+                ) {
+                    Text(
+                        text = "Tiene ${formatAmount(availableCredit)} a su favor. Puedes aplicarlo al pago.",
+                        color = SyncOk,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(onClick = onApplyCredit) { Text("Aplicar") }
+                }
+            }
+        }
         paymentMethods.forEach { method ->
             PaymentMethodRow(
                 type = method.type,

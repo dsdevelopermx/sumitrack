@@ -8,6 +8,7 @@ import com.sumitrack.android.domain.models.PaymentMethodType
 import com.sumitrack.android.domain.models.Product
 import com.sumitrack.android.domain.models.SyncStatus
 import com.sumitrack.android.ui.screens.clients.FakeSaleDao
+import com.sumitrack.android.ui.screens.orders.FakeCreditBalanceDao
 import com.sumitrack.android.ui.screens.orders.FakeInstallmentDao
 import com.sumitrack.android.ui.screens.orders.FakePaymentDao
 import com.sumitrack.android.ui.screens.orders.FakeSaleItemDao
@@ -34,7 +35,7 @@ class RegisterPaymentUseCaseTest {
         fakeSaleDao = FakeSaleDao()
         fakeInstallmentDao = FakeInstallmentDao()
         fakePaymentDao = FakePaymentDao()
-        saleRepository = SaleRepository(FakeTransactionRunner(), fakeSaleDao, FakeSaleItemDao(), fakeInstallmentDao, fakePaymentDao)
+        saleRepository = SaleRepository(FakeTransactionRunner(), fakeSaleDao, FakeSaleItemDao(), fakeInstallmentDao, fakePaymentDao, FakeCreditBalanceDao())
         useCase = RegisterPaymentUseCase(saleRepository)
     }
 

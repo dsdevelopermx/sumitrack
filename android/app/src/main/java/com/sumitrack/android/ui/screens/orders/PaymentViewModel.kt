@@ -14,6 +14,7 @@ import com.sumitrack.android.domain.models.OrderDraftItem
 import com.sumitrack.android.domain.models.PaymentMethodType
 import com.sumitrack.android.domain.models.TicketData
 import com.sumitrack.android.domain.models.calculateOrderTotals
+import com.sumitrack.android.domain.usecases.CalculateAvailableCreditUseCase
 import com.sumitrack.android.domain.usecases.CalculateInstallmentsUseCase
 import com.sumitrack.android.domain.usecases.GenerateTicketUseCase
 import com.sumitrack.android.domain.usecases.InstallmentSuggestion
@@ -59,6 +60,7 @@ data class PaymentUiState(
     val isPrinting: Boolean = false,
     val isSharing: Boolean = false,
     val printError: String? = null,
+    val availableCredit: BigDecimal = BigDecimal.ZERO,
 ) {
     val total: BigDecimal get() = calculateOrderTotals(items).total
 
@@ -93,6 +95,7 @@ class PaymentViewModel @Inject constructor(
     private val saleRepository: SaleRepository,
     private val validateFolioUseCase: ValidateFolioUseCase,
     private val calculateInstallmentsUseCase: CalculateInstallmentsUseCase,
+    private val calculateAvailableCreditUseCase: CalculateAvailableCreditUseCase,
     private val generateTicketUseCase: GenerateTicketUseCase,
     private val bluetoothTicketPrinter: BluetoothTicketPrinter,
     private val ticketFileWriter: TicketFileWriter,
@@ -144,7 +147,10 @@ class PaymentViewModel @Inject constructor(
                     ?.toIntOrNull()
                     ?: 15
                 ).coerceAtMost(CalculateInstallmentsUseCase.MAX_INSTALLMENTS_HARD_LIMIT)
-            _uiState.update { it.copy(isLoading = false, items = items, maxParcialidades = maxParcialidades) }
+            val availableCredit = runCatching { calculateAvailableCreditUseCase(clientId, tenant) }.getOrDefault(BigDecimal.ZERO)
+            _uiState.update {
+                it.copy(isLoading = false, items = items, maxParcialidades = maxParcialidades, availableCredit = availableCredit)
+            }
         }
     }
 
@@ -182,6 +188,26 @@ class PaymentViewModel @Inject constructor(
     fun onPaymentMethodAmountChange(localId: String, text: String) {
         _uiState.update { state ->
             state.copy(paymentMethods = state.paymentMethods.map { if (it.localId == localId) it.copy(amountText = text) else it })
+        }
+    }
+
+    // AC-5: agrega Crédito a Favor como una fila más del constructor de métodos de pago, con
+    // amountText pre-llenado pero editable como cualquier otra fila (no reutiliza el patrón
+    // "monto de solo lectura" de RegisterPaymentDialog — aquí sí conviven varios métodos que deben
+    // sumar exactamente el total, igual que EFECTIVO/TRANSFERENCIA/TARJETA ya lo hacen). Protegido
+    // contra duplicados (mismo criterio que EFECTIVO en onAddPaymentMethod) y contra crédito $0.
+    fun onApplyCreditClick() {
+        _uiState.update { state ->
+            if (state.paymentMethods.any { it.type == PaymentMethodType.CREDITO_A_FAVOR }) return@update state
+            val amount = state.availableCredit.min(state.remaining)
+            if (amount <= BigDecimal.ZERO) return@update state
+            val draft = PaymentMethodDraft(type = PaymentMethodType.CREDITO_A_FAVOR, amountText = amount.toPlainString())
+            val methods = if (state.paymentMethods.size == 1 && state.paymentMethods.first().amountText.isBlank()) {
+                listOf(draft)
+            } else {
+                state.paymentMethods + draft
+            }
+            state.copy(paymentMethods = methods)
         }
     }
 

@@ -38,7 +38,7 @@ class OrderSummaryViewModelTest {
         clientRepository = ClientRepository(
             FakeClientDao(),
             CalculateClientBalanceUseCase(
-                SaleRepository(FakeTransactionRunner(), FakeSaleDao(), FakeSaleItemDao(), FakeInstallmentDao(), FakePaymentDao())
+                SaleRepository(FakeTransactionRunner(), FakeSaleDao(), FakeSaleItemDao(), FakeInstallmentDao(), FakePaymentDao(), FakeCreditBalanceDao())
             ),
         )
         productRepository = ProductRepository(FakeTransactionRunner(), FakeProductDao(), FakeProductVariantDao())

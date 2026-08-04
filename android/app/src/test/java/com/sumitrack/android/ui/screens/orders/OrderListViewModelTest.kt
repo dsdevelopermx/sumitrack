@@ -32,7 +32,7 @@ class OrderListViewModelTest {
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         fakeDao = FakeSaleDao()
-        repository = SaleRepository(FakeTransactionRunner(), fakeDao, FakeSaleItemDao(), FakeInstallmentDao(), FakePaymentDao())
+        repository = SaleRepository(FakeTransactionRunner(), fakeDao, FakeSaleItemDao(), FakeInstallmentDao(), FakePaymentDao(), FakeCreditBalanceDao())
         fakeDao.setClientNames(mapOf("client-1" to "Ana López", "client-2" to "Bernardo Ruiz"))
     }
 

@@ -128,9 +128,10 @@ fun ClientProfileScreen(
                         color = MaterialTheme.colorScheme.primary,
                     )
 
-                    // Fuera de alcance en esta historia: overdueAmount/creditAmount siempre
-                    // null — ver "Fuera de alcance" en la historia 2.3.
-                    FinancialAlertBanner(overdueAmount = null, creditAmount = null)
+                    // overdueAmount sigue null — deuda vencida es Epic 5, fuera de alcance (ver
+                    // "Fuera de alcance" en la historia 2.3). creditAmount ya es real desde
+                    // Historia 3.7 — FinancialAlertBanner no se modificó, solo se le pasa el dato.
+                    FinancialAlertBanner(overdueAmount = null, creditAmount = uiState.creditBalance?.takeIf { it > BigDecimal.ZERO })
 
                     Spacer(modifier = Modifier.height(24.dp))
                     Text(text = "Datos de contacto", style = MaterialTheme.typography.titleMedium)

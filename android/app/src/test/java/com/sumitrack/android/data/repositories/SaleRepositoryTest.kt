@@ -1,5 +1,6 @@
 package com.sumitrack.android.data.repositories
 
+import com.sumitrack.android.data.local.entities.CreditBalanceEntity
 import com.sumitrack.android.data.local.entities.InstallmentEntity
 import com.sumitrack.android.data.local.entities.SaleEntity
 import com.sumitrack.android.domain.models.OrderDraftItem
@@ -11,6 +12,7 @@ import com.sumitrack.android.domain.models.SaleStatus
 import com.sumitrack.android.domain.models.SyncStatus
 import com.sumitrack.android.domain.usecases.InstallmentSuggestion
 import com.sumitrack.android.ui.screens.clients.FakeSaleDao
+import com.sumitrack.android.ui.screens.orders.FakeCreditBalanceDao
 import com.sumitrack.android.ui.screens.orders.FakeInstallmentDao
 import com.sumitrack.android.ui.screens.orders.FakePaymentDao
 import com.sumitrack.android.ui.screens.orders.FakeSaleItemDao
@@ -22,6 +24,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -34,6 +37,7 @@ class SaleRepositoryTest {
     private lateinit var fakeSaleItemDao: FakeSaleItemDao
     private lateinit var fakeInstallmentDao: FakeInstallmentDao
     private lateinit var fakePaymentDao: FakePaymentDao
+    private lateinit var fakeCreditBalanceDao: FakeCreditBalanceDao
     private lateinit var repository: SaleRepository
 
     @Before
@@ -42,7 +46,8 @@ class SaleRepositoryTest {
         fakeSaleItemDao = FakeSaleItemDao()
         fakeInstallmentDao = FakeInstallmentDao()
         fakePaymentDao = FakePaymentDao()
-        repository = SaleRepository(FakeTransactionRunner(), fakeDao, fakeSaleItemDao, fakeInstallmentDao, fakePaymentDao)
+        fakeCreditBalanceDao = FakeCreditBalanceDao()
+        repository = SaleRepository(FakeTransactionRunner(), fakeDao, fakeSaleItemDao, fakeInstallmentDao, fakePaymentDao, fakeCreditBalanceDao)
     }
 
     private fun product(
@@ -562,5 +567,146 @@ class SaleRepositoryTest {
 
         val untouched = fakeInstallmentDao.getForSale("s1", "tenant-1").first { it.id == "i2" }
         assertEquals(untouchedTimestamp, untouched.updatedAt)
+    }
+
+    private fun creditRow(id: String, clientId: String = "client-1", amount: BigDecimal, createdAt: Instant = Instant.now()) =
+        CreditBalanceEntity(
+            id = id, fkTenant = "tenant-1", fkClient = clientId, amount = amount, origin = "cancellation",
+            fkOriginSale = "origin-sale", appliedAt = null, createdAt = createdAt, updatedAt = createdAt, syncStatus = "pending",
+        )
+
+    @Test
+    fun `cancelSale without payments cancels the sale and pending installments, leaves paid ones untouched`() = runTest {
+        fakeDao.setSales(listOf(sale(id = "s1", total = BigDecimal("300.00"), status = "partial")))
+        fakeInstallmentDao.upsertAll(
+            listOf(
+                installmentEntity(id = "i1", saleId = "s1", amount = BigDecimal("150.00"), status = "paid"),
+                installmentEntity(id = "i2", saleId = "s1", amount = BigDecimal("150.00"), status = "pending"),
+            )
+        )
+
+        val result = repository.cancelSale(tenantId = "tenant-1", saleId = "s1", creditAmount = null)
+
+        assertTrue(result)
+        assertEquals("cancelled", fakeDao.getById("s1", "tenant-1")?.status)
+        val installments = fakeInstallmentDao.getForSale("s1", "tenant-1").associateBy { it.id }
+        assertEquals("paid", installments["i1"]?.status)
+        assertEquals("cancelled", installments["i2"]?.status)
+    }
+
+    @Test
+    fun `cancelSale with creditAmount creates a CreditBalanceEntity for that client`() = runTest {
+        fakeDao.setSales(listOf(sale(id = "s1", clientId = "client-1", total = BigDecimal("300.00"), status = "partial")))
+
+        repository.cancelSale(tenantId = "tenant-1", saleId = "s1", creditAmount = BigDecimal("200.00"))
+
+        val credit = fakeCreditBalanceDao.getForClient("client-1", "tenant-1")
+        assertEquals(1, credit.size)
+        assertEquals(BigDecimal("200.00"), credit.first().amount)
+        assertEquals("cancellation", credit.first().origin)
+        assertEquals("s1", credit.first().fkOriginSale)
+    }
+
+    @Test
+    fun `cancelSale without creditAmount does not create a CreditBalanceEntity`() = runTest {
+        fakeDao.setSales(listOf(sale(id = "s1", total = BigDecimal("300.00"), status = "partial")))
+
+        repository.cancelSale(tenantId = "tenant-1", saleId = "s1", creditAmount = null)
+
+        assertEquals(emptyList<Any>(), fakeCreditBalanceDao.getForClient("client-1", "tenant-1"))
+    }
+
+    @Test
+    fun `cancelSale returns false for an unknown saleId`() = runTest {
+        val result = repository.cancelSale(tenantId = "tenant-1", saleId = "does-not-exist", creditAmount = null)
+        assertFalse(result)
+    }
+
+    @Test
+    fun `getAvailableCredit sums all credit rows for the client`() = runTest {
+        fakeCreditBalanceDao.upsertAll(
+            listOf(creditRow(id = "c1", amount = BigDecimal("100.00")), creditRow(id = "c2", amount = BigDecimal("50.00")))
+        )
+
+        val result = repository.getAvailableCredit("client-1", "tenant-1")
+
+        assertEquals(BigDecimal("150.00"), result)
+    }
+
+    @Test
+    fun `createSale with a CREDITO_A_FAVOR payment consumes credit FIFO leaving a remainder`() = runTest {
+        val older = Instant.parse("2020-01-01T00:00:00Z")
+        val newer = Instant.parse("2020-02-01T00:00:00Z")
+        fakeCreditBalanceDao.upsertAll(
+            listOf(
+                creditRow(id = "c1", amount = BigDecimal("300.00"), createdAt = older),
+                creditRow(id = "c2", amount = BigDecimal("300.00"), createdAt = newer),
+            )
+        )
+        val items = listOf(OrderDraftItem(product(price = BigDecimal("400.00")), null, 1))
+
+        repository.createSale(
+            tenantId = "tenant-1", clientId = "client-1", folio = "A1", items = items,
+            paymentConfig = PaymentConfig.Immediate(listOf(PaymentMethodType.CREDITO_A_FAVOR to BigDecimal("400.00"))),
+        )
+
+        val rows = fakeCreditBalanceDao.getForClient("client-1", "tenant-1").associateBy { it.id }
+        assertEquals(0, BigDecimal.ZERO.compareTo(rows["c1"]?.amount)) // consumida completa primero (más antigua)
+        assertEquals(BigDecimal("200.00"), rows["c2"]?.amount) // remanente, sigue disponible
+    }
+
+    @Test
+    fun `createSale throws and leaves credit untouched when CREDITO_A_FAVOR exceeds the client's available credit`() = runTest {
+        fakeCreditBalanceDao.upsertAll(listOf(creditRow(id = "c1", amount = BigDecimal("100.00"))))
+        val items = listOf(OrderDraftItem(product(price = BigDecimal("400.00")), null, 1))
+
+        var thrown: IllegalStateException? = null
+        try {
+            repository.createSale(
+                tenantId = "tenant-1", clientId = "client-1", folio = "A1", items = items,
+                paymentConfig = PaymentConfig.Immediate(listOf(PaymentMethodType.CREDITO_A_FAVOR to BigDecimal("400.00"))),
+            )
+        } catch (e: IllegalStateException) {
+            thrown = e
+        }
+
+        assertTrue(thrown != null)
+        // La excepción revierte TODA la transacción — el crédito queda exactamente como estaba.
+        assertEquals(BigDecimal("100.00"), fakeCreditBalanceDao.getForClient("client-1", "tenant-1").first().amount)
+    }
+
+    @Test
+    fun `createSale orders FIFO credit consumption deterministically when two rows share createdAt`() = runTest {
+        val sameInstant = Instant.parse("2020-01-01T00:00:00Z")
+        fakeCreditBalanceDao.upsertAll(
+            listOf(
+                creditRow(id = "z-row", amount = BigDecimal("100.00"), createdAt = sameInstant),
+                creditRow(id = "a-row", amount = BigDecimal("100.00"), createdAt = sameInstant),
+            )
+        )
+        val items = listOf(OrderDraftItem(product(price = BigDecimal("100.00")), null, 1))
+
+        repository.createSale(
+            tenantId = "tenant-1", clientId = "client-1", folio = "A1", items = items,
+            paymentConfig = PaymentConfig.Immediate(listOf(PaymentMethodType.CREDITO_A_FAVOR to BigDecimal("100.00"))),
+        )
+
+        val rows = fakeCreditBalanceDao.getForClient("client-1", "tenant-1").associateBy { it.id }
+        // "a-row" gana el desempate por id (orden determinista, no depende del orden de inserción).
+        assertEquals(0, BigDecimal.ZERO.compareTo(rows["a-row"]?.amount))
+        assertEquals(BigDecimal("100.00"), rows["z-row"]?.amount)
+    }
+
+    @Test
+    fun `createSale without a CREDITO_A_FAVOR payment leaves credit rows untouched`() = runTest {
+        fakeCreditBalanceDao.upsertAll(listOf(creditRow(id = "c1", amount = BigDecimal("100.00"))))
+        val items = listOf(OrderDraftItem(product(price = BigDecimal("50.00")), null, 1))
+
+        repository.createSale(
+            tenantId = "tenant-1", clientId = "client-1", folio = "A1", items = items,
+            paymentConfig = PaymentConfig.Immediate(listOf(PaymentMethodType.EFECTIVO to BigDecimal("50.00"))),
+        )
+
+        assertEquals(BigDecimal("100.00"), fakeCreditBalanceDao.getForClient("client-1", "tenant-1").first().amount)
     }
 }

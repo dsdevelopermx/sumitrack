@@ -59,6 +59,7 @@ import com.sumitrack.android.domain.models.TicketPaymentCondition
 import com.sumitrack.android.ui.components.EmptyState
 import com.sumitrack.android.ui.components.SaleUiStatus
 import com.sumitrack.android.ui.components.StatusBadge
+import com.sumitrack.android.ui.theme.StatusCancelled
 import com.sumitrack.android.ui.theme.StatusOverdue
 import com.sumitrack.android.ui.theme.StatusPaid
 import com.sumitrack.android.ui.theme.StatusPending
@@ -94,10 +95,17 @@ fun OrderDetailScreen(
         }
     }
 
-    LaunchedEffect(uiState.cancelPlaceholderMessage) {
-        uiState.cancelPlaceholderMessage?.let {
+    LaunchedEffect(uiState.cancelSuccessMessage) {
+        uiState.cancelSuccessMessage?.let {
             snackbarHostState.showSnackbar(it)
-            viewModel.onCancelPlaceholderShown()
+            viewModel.onCancelSuccessMessageShown()
+        }
+    }
+
+    LaunchedEffect(uiState.cancelError) {
+        uiState.cancelError?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.onCancelErrorShown()
         }
     }
 
@@ -186,7 +194,7 @@ fun OrderDetailScreen(
                                 uiState.installments.forEach { installment ->
                                     InstallmentRow(
                                         installment = installment,
-                                        onClick = if (installment.toUiStatus() != InstallmentUiStatus.PAID) {
+                                        onClick = if (installment.toUiStatus() != InstallmentUiStatus.PAID && uiState.status != SaleStatus.CANCELLED) {
                                             { viewModel.onRegisterPaymentClick(installment.id) }
                                         } else {
                                             null
@@ -254,6 +262,25 @@ fun OrderDetailScreen(
                 TextButton(onClick = { showCancelDialog = false }) {
                     Text("No, mantenerla")
                 }
+            },
+        )
+    }
+
+    if (uiState.showCreditChoiceDialog) {
+        // confirmButton/dismissButton son solo los dos slots estándar del AlertDialog de M3 —
+        // ninguno de los dos es "cancelar la acción de cancelar"; ambos son Opción A/Opción B
+        // reales (AC-2). onDismissRequest (tocar fuera / back) es la única forma de no elegir
+        // ninguna, dejando la venta sin cancelar — copy descriptivo, nunca "Aceptar/Cancelar"
+        // genérico (convención de EXPERIENCE.md ya seguida por el primer dialog).
+        AlertDialog(
+            onDismissRequest = viewModel::onCreditChoiceDialogDismiss,
+            title = { Text("Esta orden tiene cobros registrados") },
+            text = { Text("¿Qué hacemos con los pagos ya recibidos?") },
+            confirmButton = {
+                TextButton(onClick = viewModel::onCancelWithCredit) { Text("Generar Crédito a Favor") }
+            },
+            dismissButton = {
+                TextButton(onClick = viewModel::onCancelKeepingPayments) { Text("Cancelar parcialidades") }
             },
         )
     }
@@ -359,6 +386,7 @@ private fun installmentStatusLabelAndColor(status: InstallmentUiStatus): Pair<St
     InstallmentUiStatus.PAID -> "Pagada" to StatusPaid
     InstallmentUiStatus.PENDING -> "Pendiente" to StatusPending
     InstallmentUiStatus.OVERDUE -> "Vencida" to StatusOverdue
+    InstallmentUiStatus.CANCELLED -> "Cancelada" to StatusCancelled
 }
 
 private fun SaleStatus.toUiStatus(): SaleUiStatus = when (this) {
@@ -396,7 +424,11 @@ private fun RegisterPaymentDialog(
             Column {
                 Text(formatAmount(amount), style = MaterialTheme.typography.titleLarge)
                 Column(modifier = Modifier.padding(top = 16.dp)) {
-                    PaymentMethodType.entries.forEach { method ->
+                    // Crédito a Favor se excluye aquí: "Registrar Cobro" (Historia 3.6) cobra
+                    // contra una venta/parcialidad ya existente, no crea ni consume crédito — esa
+                    // lógica solo vive dentro de SaleRepository.createSale (Historia 3.7, S-07).
+                    // Seleccionarlo aquí registraría un "cobro" que nunca descuenta el saldo real.
+                    PaymentMethodType.entries.filterNot { it == PaymentMethodType.CREDITO_A_FAVOR }.forEach { method ->
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
@@ -434,4 +466,5 @@ private fun registerPaymentMethodLabel(type: PaymentMethodType): String = when (
     PaymentMethodType.EFECTIVO -> "Efectivo"
     PaymentMethodType.TRANSFERENCIA -> "Transferencia"
     PaymentMethodType.TARJETA -> "Tarjeta"
+    PaymentMethodType.CREDITO_A_FAVOR -> "Crédito a Favor"
 }

@@ -143,5 +143,26 @@ object Migrations {
         }
     }
 
-    val ALL: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+    val MIGRATION_5_6 = object : Migration(5, 6) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS credit_balances (
+                    id TEXT NOT NULL PRIMARY KEY,
+                    fk_tenant TEXT NOT NULL,
+                    fk_client TEXT NOT NULL,
+                    amount TEXT NOT NULL,
+                    origin TEXT NOT NULL,
+                    fk_origin_sale TEXT,
+                    applied_at INTEGER,
+                    created_at INTEGER NOT NULL,
+                    updated_at INTEGER NOT NULL,
+                    sync_status TEXT NOT NULL DEFAULT 'pending'
+                )
+                """.trimIndent()
+            )
+        }
+    }
+
+    val ALL: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
 }

@@ -36,7 +36,7 @@ class ClientSelectViewModelTest {
         repository = ClientRepository(
             fakeClientDao,
             CalculateClientBalanceUseCase(
-                SaleRepository(FakeTransactionRunner(), FakeSaleDao(), FakeSaleItemDao(), FakeInstallmentDao(), FakePaymentDao())
+                SaleRepository(FakeTransactionRunner(), FakeSaleDao(), FakeSaleItemDao(), FakeInstallmentDao(), FakePaymentDao(), FakeCreditBalanceDao())
             ),
         )
     }

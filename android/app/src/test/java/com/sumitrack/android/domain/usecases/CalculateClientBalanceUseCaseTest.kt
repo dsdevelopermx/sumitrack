@@ -4,6 +4,7 @@ import com.sumitrack.android.data.local.entities.PaymentEntity
 import com.sumitrack.android.data.local.entities.SaleEntity
 import com.sumitrack.android.data.repositories.SaleRepository
 import com.sumitrack.android.ui.screens.clients.FakeSaleDao
+import com.sumitrack.android.ui.screens.orders.FakeCreditBalanceDao
 import com.sumitrack.android.ui.screens.orders.FakeInstallmentDao
 import com.sumitrack.android.ui.screens.orders.FakePaymentDao
 import com.sumitrack.android.ui.screens.orders.FakeSaleItemDao
@@ -26,7 +27,7 @@ class CalculateClientBalanceUseCaseTest {
         fakeDao = FakeSaleDao()
         fakePaymentDao = FakePaymentDao()
         useCase = CalculateClientBalanceUseCase(
-            SaleRepository(FakeTransactionRunner(), fakeDao, FakeSaleItemDao(), FakeInstallmentDao(), fakePaymentDao)
+            SaleRepository(FakeTransactionRunner(), fakeDao, FakeSaleItemDao(), FakeInstallmentDao(), fakePaymentDao, FakeCreditBalanceDao())
         )
     }
 
