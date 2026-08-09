@@ -13,4 +13,11 @@ class FakePaymentDao : PaymentDao {
     override suspend fun upsertAll(payments: List<PaymentEntity>) {
         payments.forEach { this.payments[it.id] = it }
     }
+
+    override suspend fun getPending(tenantId: String): List<PaymentEntity> =
+        payments.values.filter { it.fkTenant == tenantId && it.syncStatus == "pending" }
+
+    override suspend fun markSynced(ids: List<String>) {
+        ids.forEach { id -> payments[id]?.let { payments[id] = it.copy(syncStatus = "synced") } }
+    }
 }

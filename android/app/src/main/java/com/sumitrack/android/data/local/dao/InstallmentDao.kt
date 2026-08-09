@@ -13,4 +13,10 @@ interface InstallmentDao {
 
     @Upsert
     suspend fun upsertAll(installments: List<InstallmentEntity>)
+
+    @Query("SELECT * FROM installments WHERE fk_tenant = :tenantId AND sync_status = 'pending'")
+    suspend fun getPending(tenantId: String): List<InstallmentEntity>
+
+    @Query("UPDATE installments SET sync_status = 'synced' WHERE id IN (:ids)")
+    suspend fun markSynced(ids: List<String>)
 }

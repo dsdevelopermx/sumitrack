@@ -24,4 +24,11 @@ class FakeProductVariantDao : ProductVariantDao {
 
     override suspend fun getProductIdsWithVariants(tenantId: String): List<String> =
         variants.values.filter { it.fkTenant == tenantId }.map { it.fkProduct }.distinct()
+
+    override suspend fun getPending(tenantId: String): List<ProductVariantEntity> =
+        variants.values.filter { it.fkTenant == tenantId && it.syncStatus == "pending" }
+
+    override suspend fun markSynced(ids: List<String>) {
+        ids.forEach { id -> variants[id]?.let { variants[id] = it.copy(syncStatus = "synced") } }
+    }
 }

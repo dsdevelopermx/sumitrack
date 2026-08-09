@@ -28,4 +28,11 @@ class FakeProductDao : ProductDao {
         products.forEach { byId[it.id] = it }
         allFlow.value = byId.values.toList()
     }
+
+    override suspend fun getPending(tenantId: String): List<ProductEntity> =
+        allFlow.value.filter { it.fkTenant == tenantId && it.syncStatus == "pending" }
+
+    override suspend fun markSynced(ids: List<String>) {
+        allFlow.value = allFlow.value.map { if (it.id in ids) it.copy(syncStatus = "synced") else it }
+    }
 }

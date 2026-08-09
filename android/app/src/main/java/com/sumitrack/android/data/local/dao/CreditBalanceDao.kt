@@ -13,4 +13,10 @@ interface CreditBalanceDao {
 
     @Upsert
     suspend fun upsertAll(rows: List<CreditBalanceEntity>)
+
+    @Query("SELECT * FROM credit_balances WHERE fk_tenant = :tenantId AND sync_status = 'pending'")
+    suspend fun getPending(tenantId: String): List<CreditBalanceEntity>
+
+    @Query("UPDATE credit_balances SET sync_status = 'synced' WHERE id IN (:ids)")
+    suspend fun markSynced(ids: List<String>)
 }

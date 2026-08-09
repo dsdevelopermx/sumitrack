@@ -15,4 +15,11 @@ class FakeInstallmentDao : InstallmentDao {
     override suspend fun upsertAll(installments: List<InstallmentEntity>) {
         installments.forEach { this.installments[it.id] = it }
     }
+
+    override suspend fun getPending(tenantId: String): List<InstallmentEntity> =
+        installments.values.filter { it.fkTenant == tenantId && it.syncStatus == "pending" }
+
+    override suspend fun markSynced(ids: List<String>) {
+        ids.forEach { id -> installments[id]?.let { installments[id] = it.copy(syncStatus = "synced") } }
+    }
 }

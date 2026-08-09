@@ -13,4 +13,10 @@ interface PaymentDao {
 
     @Upsert
     suspend fun upsertAll(payments: List<PaymentEntity>)
+
+    @Query("SELECT * FROM payments WHERE fk_tenant = :tenantId AND sync_status = 'pending'")
+    suspend fun getPending(tenantId: String): List<PaymentEntity>
+
+    @Query("UPDATE payments SET sync_status = 'synced' WHERE id IN (:ids)")
+    suspend fun markSynced(ids: List<String>)
 }

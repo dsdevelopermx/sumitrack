@@ -36,7 +36,7 @@ import com.sumitrack.android.data.local.entities.SettingsEntity
         PaymentEntity::class,
         CreditBalanceEntity::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = true,
 )
 @TypeConverters(BigDecimalConverter::class, InstantConverter::class)

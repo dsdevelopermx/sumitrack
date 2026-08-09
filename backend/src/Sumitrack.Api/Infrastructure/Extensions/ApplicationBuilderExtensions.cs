@@ -27,8 +27,124 @@ public static class ApplicationBuilderExtensions
         CREATE TABLE IF NOT EXISTS "{schema}".settings (
             key CHARACTER VARYING(100) NOT NULL,
             value TEXT,
+            created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
             updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+            sync_status CHARACTER VARYING(20) NOT NULL DEFAULT 'synced',
             CONSTRAINT pk_settings PRIMARY KEY (key)
+        );
+
+        ALTER TABLE "{schema}".settings ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW();
+        ALTER TABLE "{schema}".settings ADD COLUMN IF NOT EXISTS sync_status CHARACTER VARYING(20) NOT NULL DEFAULT 'synced';
+
+        CREATE TABLE IF NOT EXISTS "{schema}".clients (
+            id UUID NOT NULL,
+            fk_tenant UUID NOT NULL,
+            name CHARACTER VARYING(200) NOT NULL,
+            phone CHARACTER VARYING(20) NOT NULL,
+            rfc CHARACTER VARYING(20),
+            address TEXT,
+            notes TEXT,
+            created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+            sync_status CHARACTER VARYING(20) NOT NULL DEFAULT 'synced',
+            CONSTRAINT pk_clients PRIMARY KEY (id)
+        );
+
+        CREATE TABLE IF NOT EXISTS "{schema}".products (
+            id UUID NOT NULL,
+            fk_tenant UUID NOT NULL,
+            name CHARACTER VARYING(200) NOT NULL,
+            price NUMERIC(18,6) NOT NULL,
+            tax_rate NUMERIC(18,6) NOT NULL,
+            is_active BOOLEAN NOT NULL DEFAULT TRUE,
+            created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+            sync_status CHARACTER VARYING(20) NOT NULL DEFAULT 'synced',
+            CONSTRAINT pk_products PRIMARY KEY (id)
+        );
+
+        CREATE TABLE IF NOT EXISTS "{schema}".product_variants (
+            id UUID NOT NULL,
+            fk_tenant UUID NOT NULL,
+            fk_product UUID NOT NULL,
+            name CHARACTER VARYING(100) NOT NULL,
+            created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+            sync_status CHARACTER VARYING(20) NOT NULL DEFAULT 'synced',
+            CONSTRAINT pk_product_variants PRIMARY KEY (id)
+        );
+
+        CREATE TABLE IF NOT EXISTS "{schema}".sales (
+            id UUID NOT NULL,
+            fk_tenant UUID NOT NULL,
+            fk_client UUID NOT NULL,
+            folio CHARACTER VARYING(50) NOT NULL,
+            total NUMERIC(18,6) NOT NULL,
+            subtotal NUMERIC(18,6) NOT NULL DEFAULT 0,
+            tax NUMERIC(18,6) NOT NULL DEFAULT 0,
+            status CHARACTER VARYING(20) NOT NULL DEFAULT 'pending',
+            created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+            sync_status CHARACTER VARYING(20) NOT NULL DEFAULT 'synced',
+            CONSTRAINT pk_sales PRIMARY KEY (id)
+        );
+
+        CREATE TABLE IF NOT EXISTS "{schema}".sale_items (
+            id UUID NOT NULL,
+            fk_tenant UUID NOT NULL,
+            fk_sale UUID NOT NULL,
+            fk_product UUID NOT NULL,
+            fk_variant UUID,
+            product_name CHARACTER VARYING(200) NOT NULL,
+            variant_name CHARACTER VARYING(100),
+            quantity INTEGER NOT NULL,
+            unit_price NUMERIC(18,6) NOT NULL,
+            tax_rate NUMERIC(18,6) NOT NULL,
+            created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+            sync_status CHARACTER VARYING(20) NOT NULL DEFAULT 'synced',
+            CONSTRAINT pk_sale_items PRIMARY KEY (id)
+        );
+
+        CREATE TABLE IF NOT EXISTS "{schema}".installments (
+            id UUID NOT NULL,
+            fk_tenant UUID NOT NULL,
+            fk_sale UUID NOT NULL,
+            amount NUMERIC(18,6) NOT NULL,
+            due_date TIMESTAMP WITH TIME ZONE NOT NULL,
+            status CHARACTER VARYING(20) NOT NULL DEFAULT 'pending',
+            created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+            sync_status CHARACTER VARYING(20) NOT NULL DEFAULT 'synced',
+            CONSTRAINT pk_installments PRIMARY KEY (id)
+        );
+
+        CREATE TABLE IF NOT EXISTS "{schema}".payments (
+            id UUID NOT NULL,
+            fk_tenant UUID NOT NULL,
+            fk_sale UUID NOT NULL,
+            fk_installment UUID,
+            method CHARACTER VARYING(30) NOT NULL,
+            amount NUMERIC(18,6) NOT NULL,
+            paid_at TIMESTAMP WITH TIME ZONE NOT NULL,
+            created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+            sync_status CHARACTER VARYING(20) NOT NULL DEFAULT 'synced',
+            CONSTRAINT pk_payments PRIMARY KEY (id)
+        );
+
+        CREATE TABLE IF NOT EXISTS "{schema}".credit_balances (
+            id UUID NOT NULL,
+            fk_tenant UUID NOT NULL,
+            fk_client UUID NOT NULL,
+            amount NUMERIC(18,6) NOT NULL,
+            origin CHARACTER VARYING(20) NOT NULL DEFAULT 'cancellation',
+            fk_origin_sale UUID,
+            applied_at TIMESTAMP WITH TIME ZONE,
+            created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+            sync_status CHARACTER VARYING(20) NOT NULL DEFAULT 'synced',
+            CONSTRAINT pk_credit_balances PRIMARY KEY (id)
         );
         """;
 

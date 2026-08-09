@@ -48,4 +48,10 @@ interface ClientDao {
 
     @Query("SELECT * FROM clients WHERE id = :id LIMIT 1")
     suspend fun getById(id: String): ClientEntity?
+
+    @Query("SELECT * FROM clients WHERE fk_tenant = :tenantId AND sync_status = 'pending'")
+    suspend fun getPending(tenantId: String): List<ClientEntity>
+
+    @Query("UPDATE clients SET sync_status = 'synced' WHERE id IN (:ids)")
+    suspend fun markSynced(ids: List<String>)
 }

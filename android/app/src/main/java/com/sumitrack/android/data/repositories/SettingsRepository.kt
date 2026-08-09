@@ -13,7 +13,7 @@ class SettingsRepository @Inject constructor(
 ) {
     suspend fun downloadAndCacheSettings(token: String) {
         val dtos = settingsApiService.getSettings("Bearer $token")
-        val entities = dtos.map { SettingsEntity(key = it.key, value = it.value) }
+        val entities = dtos.map { SettingsEntity(key = it.key, value = it.value, syncStatus = "synced") }
         settingsDao.upsertAll(entities)
     }
 

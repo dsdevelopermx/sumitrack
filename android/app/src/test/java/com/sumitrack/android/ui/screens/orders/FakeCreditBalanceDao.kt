@@ -13,4 +13,11 @@ class FakeCreditBalanceDao : CreditBalanceDao {
     override suspend fun upsertAll(rows: List<CreditBalanceEntity>) {
         rows.forEach { this.rows[it.id] = it }
     }
+
+    override suspend fun getPending(tenantId: String): List<CreditBalanceEntity> =
+        rows.values.filter { it.fkTenant == tenantId && it.syncStatus == "pending" }
+
+    override suspend fun markSynced(ids: List<String>) {
+        ids.forEach { id -> rows[id]?.let { rows[id] = it.copy(syncStatus = "synced") } }
+    }
 }

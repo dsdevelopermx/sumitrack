@@ -19,4 +19,10 @@ interface ProductVariantDao {
 
     @Query("DELETE FROM product_variants WHERE fk_product = :productId AND fk_tenant = :tenantId")
     suspend fun deleteAllForProduct(productId: String, tenantId: String)
+
+    @Query("SELECT * FROM product_variants WHERE fk_tenant = :tenantId AND sync_status = 'pending'")
+    suspend fun getPending(tenantId: String): List<ProductVariantEntity>
+
+    @Query("UPDATE product_variants SET sync_status = 'synced' WHERE id IN (:ids)")
+    suspend fun markSynced(ids: List<String>)
 }

@@ -164,5 +164,19 @@ object Migrations {
         }
     }
 
-    val ALL: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+    val MIGRATION_6_7 = object : Migration(6, 7) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE settings ADD COLUMN created_at INTEGER NOT NULL DEFAULT 0")
+            db.execSQL("ALTER TABLE settings ADD COLUMN sync_status TEXT NOT NULL DEFAULT 'pending'")
+            // Backfill: los settings ya presentes en el dispositivo vienen de una descarga previa
+            // del servidor (SettingsRepository.downloadAndCacheSettings), así que se consideran
+            // sincronizados — evita que el primer PushWorker los reenvíe sin necesidad. created_at
+            // se aproxima a "ahora" (no había timestamp previo que copiar), mismo criterio que
+            // MIGRATION_4_5 con `subtotal`/`tax`.
+            db.execSQL("UPDATE settings SET sync_status = 'synced', created_at = ${System.currentTimeMillis()}")
+        }
+    }
+
+    val ALL: Array<Migration> =
+        arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
 }

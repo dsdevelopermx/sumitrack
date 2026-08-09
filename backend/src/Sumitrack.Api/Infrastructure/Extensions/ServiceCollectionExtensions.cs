@@ -5,6 +5,7 @@ using Microsoft.IdentityModel.Tokens;
 using Sumitrack.Api.Infrastructure.Auth;
 using Sumitrack.Api.Infrastructure.Data;
 using Sumitrack.Api.Services.Auth;
+using Sumitrack.Api.Services.Sync;
 using System.Text;
 
 namespace Sumitrack.Api.Infrastructure.Extensions;
@@ -38,6 +39,9 @@ public static class ServiceCollectionExtensions
 
         // Auth services
         services.AddScoped<IAuthService, AuthService>();
+
+        // Sync services
+        services.AddScoped<ISyncService, SyncService>();
 
         // JWT authentication
         var jwtSecret = configuration["Jwt:Secret"]

@@ -20,4 +20,10 @@ interface SettingsDao {
 
     @Query("DELETE FROM settings")
     suspend fun deleteAll()
+
+    @Query("SELECT * FROM settings WHERE sync_status = 'pending'")
+    suspend fun getPending(): List<SettingsEntity>
+
+    @Query("UPDATE settings SET sync_status = 'synced' WHERE key IN (:keys)")
+    suspend fun markSynced(keys: List<String>)
 }

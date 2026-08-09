@@ -13,4 +13,10 @@ interface SaleItemDao {
 
     @Upsert
     suspend fun upsertAll(items: List<SaleItemEntity>)
+
+    @Query("SELECT * FROM sale_items WHERE fk_tenant = :tenantId AND sync_status = 'pending'")
+    suspend fun getPending(tenantId: String): List<SaleItemEntity>
+
+    @Query("UPDATE sale_items SET sync_status = 'synced' WHERE id IN (:ids)")
+    suspend fun markSynced(ids: List<String>)
 }

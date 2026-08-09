@@ -53,4 +53,10 @@ interface SaleDao {
 
     @Upsert
     suspend fun upsertAll(sales: List<SaleEntity>)
+
+    @Query("SELECT * FROM sales WHERE fk_tenant = :tenantId AND sync_status = 'pending'")
+    suspend fun getPending(tenantId: String): List<SaleEntity>
+
+    @Query("UPDATE sales SET sync_status = 'synced' WHERE id IN (:ids)")
+    suspend fun markSynced(ids: List<String>)
 }

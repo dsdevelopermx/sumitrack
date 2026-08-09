@@ -83,6 +83,11 @@ dependencies {
     // Hilt + Navigation Compose (OBLIGATORIO para hiltViewModel() en NavGraph destinations)
     implementation(libs.hilt.navigation.compose)
 
+    // WorkManager + Hilt-Work (sync en background, Historia 4.1)
+    implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.androidx.hilt.work)
+    ksp(libs.androidx.hilt.compiler)
+
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 

@@ -20,4 +20,10 @@ interface ProductDao {
 
     @Upsert
     suspend fun upsertAll(products: List<ProductEntity>)
+
+    @Query("SELECT * FROM products WHERE fk_tenant = :tenantId AND sync_status = 'pending'")
+    suspend fun getPending(tenantId: String): List<ProductEntity>
+
+    @Query("UPDATE products SET sync_status = 'synced' WHERE id IN (:ids)")
+    suspend fun markSynced(ids: List<String>)
 }

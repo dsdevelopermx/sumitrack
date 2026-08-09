@@ -22,4 +22,11 @@ class FakeSettingsDao : SettingsDao {
     override suspend fun deleteAll() {
         allFlow.value = emptyList()
     }
+
+    override suspend fun getPending(): List<SettingsEntity> =
+        allFlow.value.filter { it.syncStatus == "pending" }
+
+    override suspend fun markSynced(keys: List<String>) {
+        allFlow.value = allFlow.value.map { if (it.key in keys) it.copy(syncStatus = "synced") else it }
+    }
 }
