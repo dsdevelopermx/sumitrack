@@ -38,6 +38,26 @@ public class SyncService : ISyncService
         };
     }
 
+    public Task<int> GetFolioCountAsync(CancellationToken cancellationToken = default) =>
+        _ctx.Sales.CountAsync(cancellationToken);
+
+    public async Task<object?> PullAsync(string entity, DateTime? since, CancellationToken cancellationToken = default)
+    {
+        return entity switch
+        {
+            "clientes" => await PullClientesAsync(since, cancellationToken),
+            "productos" => await PullProductosAsync(since, cancellationToken),
+            "variantes" => await PullVariantesAsync(since, cancellationToken),
+            "ventas" => await PullVentasAsync(since, cancellationToken),
+            "items_venta" => await PullItemsVentaAsync(since, cancellationToken),
+            "parcialidades" => await PullParcialidadesAsync(since, cancellationToken),
+            "cobros" => await PullCobrosAsync(since, cancellationToken),
+            "creditos_a_favor" => await PullCreditosAFavorAsync(since, cancellationToken),
+            "settings" => await PullSettingsAsync(since, cancellationToken),
+            _ => null,
+        };
+    }
+
     // El tenant siempre viene del contexto resuelto por TenantResolverMiddleware a partir del JWT
     // — nunca del payload del cliente, que podría traer cualquier fk_tenant sin validar.
     private Guid ResolveTenantId() => _tenantContext.TenantId!.Value;
@@ -680,5 +700,165 @@ public class SyncService : ISyncService
                 result.Error = $"No se pudo guardar el lote: {ex.Message}";
             }
         }
+    }
+
+    // Sin filtro explícito de fk_tenant en ninguno de los Pull*Async: el aislamiento ya lo
+    // garantiza TenantSchemaInterceptor vía `search_path` (schema-por-tenant físico) — mismo
+    // razonamiento ya aplicado a Settings desde Historia 4.1. `since` se normaliza a UTC con el
+    // mismo helper que usa el push, por si el query string llega sin sufijo de zona horaria.
+    private async Task<List<ClientPullResponseItem>> PullClientesAsync(DateTime? since, CancellationToken ct)
+    {
+        var query = _ctx.Clients.AsQueryable();
+        if (since.HasValue) query = query.Where(e => e.UpdatedAt > NormalizeUtc(since.Value));
+        return await query.Select(e => new ClientPullResponseItem
+        {
+            Id = e.Id,
+            FkTenant = e.FkTenant,
+            Name = e.Name,
+            Phone = e.Phone,
+            Rfc = e.Rfc,
+            Address = e.Address,
+            Notes = e.Notes,
+            CreatedAt = e.CreatedAt,
+            UpdatedAt = e.UpdatedAt,
+        }).ToListAsync(ct);
+    }
+
+    private async Task<List<ProductPullResponseItem>> PullProductosAsync(DateTime? since, CancellationToken ct)
+    {
+        var query = _ctx.Products.AsQueryable();
+        if (since.HasValue) query = query.Where(e => e.UpdatedAt > NormalizeUtc(since.Value));
+        return await query.Select(e => new ProductPullResponseItem
+        {
+            Id = e.Id,
+            FkTenant = e.FkTenant,
+            Name = e.Name,
+            Price = e.Price,
+            TaxRate = e.TaxRate,
+            IsActive = e.IsActive,
+            CreatedAt = e.CreatedAt,
+            UpdatedAt = e.UpdatedAt,
+        }).ToListAsync(ct);
+    }
+
+    private async Task<List<ProductVariantPullResponseItem>> PullVariantesAsync(DateTime? since, CancellationToken ct)
+    {
+        var query = _ctx.ProductVariants.AsQueryable();
+        if (since.HasValue) query = query.Where(e => e.UpdatedAt > NormalizeUtc(since.Value));
+        return await query.Select(e => new ProductVariantPullResponseItem
+        {
+            Id = e.Id,
+            FkTenant = e.FkTenant,
+            FkProduct = e.FkProduct,
+            Name = e.Name,
+            CreatedAt = e.CreatedAt,
+            UpdatedAt = e.UpdatedAt,
+        }).ToListAsync(ct);
+    }
+
+    private async Task<List<SalePullResponseItem>> PullVentasAsync(DateTime? since, CancellationToken ct)
+    {
+        var query = _ctx.Sales.AsQueryable();
+        if (since.HasValue) query = query.Where(e => e.UpdatedAt > NormalizeUtc(since.Value));
+        return await query.Select(e => new SalePullResponseItem
+        {
+            Id = e.Id,
+            FkTenant = e.FkTenant,
+            FkClient = e.FkClient,
+            Folio = e.Folio,
+            Total = e.Total,
+            Subtotal = e.Subtotal,
+            Tax = e.Tax,
+            Status = e.Status,
+            CreatedAt = e.CreatedAt,
+            UpdatedAt = e.UpdatedAt,
+        }).ToListAsync(ct);
+    }
+
+    private async Task<List<SaleItemPullResponseItem>> PullItemsVentaAsync(DateTime? since, CancellationToken ct)
+    {
+        var query = _ctx.SaleItems.AsQueryable();
+        if (since.HasValue) query = query.Where(e => e.UpdatedAt > NormalizeUtc(since.Value));
+        return await query.Select(e => new SaleItemPullResponseItem
+        {
+            Id = e.Id,
+            FkTenant = e.FkTenant,
+            FkSale = e.FkSale,
+            FkProduct = e.FkProduct,
+            FkVariant = e.FkVariant,
+            ProductName = e.ProductName,
+            VariantName = e.VariantName,
+            Quantity = e.Quantity,
+            UnitPrice = e.UnitPrice,
+            TaxRate = e.TaxRate,
+            CreatedAt = e.CreatedAt,
+            UpdatedAt = e.UpdatedAt,
+        }).ToListAsync(ct);
+    }
+
+    private async Task<List<InstallmentPullResponseItem>> PullParcialidadesAsync(DateTime? since, CancellationToken ct)
+    {
+        var query = _ctx.Installments.AsQueryable();
+        if (since.HasValue) query = query.Where(e => e.UpdatedAt > NormalizeUtc(since.Value));
+        return await query.Select(e => new InstallmentPullResponseItem
+        {
+            Id = e.Id,
+            FkTenant = e.FkTenant,
+            FkSale = e.FkSale,
+            Amount = e.Amount,
+            DueDate = e.DueDate,
+            Status = e.Status,
+            CreatedAt = e.CreatedAt,
+            UpdatedAt = e.UpdatedAt,
+        }).ToListAsync(ct);
+    }
+
+    private async Task<List<PaymentPullResponseItem>> PullCobrosAsync(DateTime? since, CancellationToken ct)
+    {
+        var query = _ctx.Payments.AsQueryable();
+        if (since.HasValue) query = query.Where(e => e.UpdatedAt > NormalizeUtc(since.Value));
+        return await query.Select(e => new PaymentPullResponseItem
+        {
+            Id = e.Id,
+            FkTenant = e.FkTenant,
+            FkSale = e.FkSale,
+            FkInstallment = e.FkInstallment,
+            Method = e.Method,
+            Amount = e.Amount,
+            PaidAt = e.PaidAt,
+            CreatedAt = e.CreatedAt,
+            UpdatedAt = e.UpdatedAt,
+        }).ToListAsync(ct);
+    }
+
+    private async Task<List<CreditBalancePullResponseItem>> PullCreditosAFavorAsync(DateTime? since, CancellationToken ct)
+    {
+        var query = _ctx.CreditBalances.AsQueryable();
+        if (since.HasValue) query = query.Where(e => e.UpdatedAt > NormalizeUtc(since.Value));
+        return await query.Select(e => new CreditBalancePullResponseItem
+        {
+            Id = e.Id,
+            FkTenant = e.FkTenant,
+            FkClient = e.FkClient,
+            Amount = e.Amount,
+            Origin = e.Origin,
+            FkOriginSale = e.FkOriginSale,
+            AppliedAt = e.AppliedAt,
+            CreatedAt = e.CreatedAt,
+            UpdatedAt = e.UpdatedAt,
+        }).ToListAsync(ct);
+    }
+
+    private async Task<List<SettingPullResponseItem>> PullSettingsAsync(DateTime? since, CancellationToken ct)
+    {
+        var query = _ctx.Settings.AsQueryable();
+        if (since.HasValue) query = query.Where(e => e.UpdatedAt > NormalizeUtc(since.Value));
+        return await query.Select(e => new SettingPullResponseItem
+        {
+            Key = e.Key,
+            Value = e.Value,
+            CreatedAt = e.CreatedAt,
+            UpdatedAt = e.UpdatedAt,
+        }).ToListAsync(ct);
     }
 }

@@ -16,6 +16,7 @@ import com.sumitrack.android.domain.usecases.CalculateClientBalanceUseCase
 import com.sumitrack.android.domain.usecases.CalculateInstallmentsUseCase
 import com.sumitrack.android.domain.usecases.GenerateTicketUseCase
 import com.sumitrack.android.domain.usecases.ValidateFolioUseCase
+import com.sumitrack.android.sync.FakeFolioBaselineStore
 import com.sumitrack.android.ui.screens.clients.FakeClientDao
 import com.sumitrack.android.ui.screens.clients.FakeSaleDao
 import com.sumitrack.android.ui.screens.products.FakeProductDao
@@ -72,7 +73,7 @@ class PaymentViewModelTest {
         fakeCreditBalanceDao = FakeCreditBalanceDao()
         saleRepository = SaleRepository(FakeTransactionRunner(), fakeSaleDao, FakeSaleItemDao(), FakeInstallmentDao(), FakePaymentDao(), fakeCreditBalanceDao)
         clientRepository = ClientRepository(FakeClientDao(), CalculateClientBalanceUseCase(saleRepository))
-        validateFolioUseCase = ValidateFolioUseCase(fakeSaleDao, settingsRepository)
+        validateFolioUseCase = ValidateFolioUseCase(fakeSaleDao, settingsRepository, FakeFolioBaselineStore())
         calculateInstallmentsUseCase = CalculateInstallmentsUseCase()
         calculateAvailableCreditUseCase = CalculateAvailableCreditUseCase(saleRepository)
         generateTicketUseCase = GenerateTicketUseCase(saleRepository, clientRepository, settingsRepository)

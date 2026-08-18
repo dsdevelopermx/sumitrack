@@ -1,5 +1,6 @@
 package com.sumitrack.android.di
 
+import com.sumitrack.android.data.repositories.FolioBaselineStore
 import com.sumitrack.android.data.repositories.SessionManager
 import dagger.Module
 import dagger.Provides
@@ -24,4 +25,9 @@ object SessionModule {
     @Provides
     @TenantId
     fun provideTenantIdFlow(sessionManager: SessionManager): Flow<String?> = sessionManager.tenantId
+
+    // Mismo criterio: expone solo la interfaz angosta de folioBaseline (no todo SessionManager)
+    // para que PullService/ValidateFolioUseCase sean testeables en JVM puro sin un Context real.
+    @Provides
+    fun provideFolioBaselineStore(sessionManager: SessionManager): FolioBaselineStore = sessionManager
 }

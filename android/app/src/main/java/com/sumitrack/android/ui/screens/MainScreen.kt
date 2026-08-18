@@ -1,12 +1,15 @@
 package com.sumitrack.android.ui.screens
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
@@ -17,6 +20,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
@@ -27,7 +32,8 @@ import com.sumitrack.android.ui.theme.PrimaryVariant
 private data class NavTab(val route: String, val label: String, val icon: ImageVector)
 
 @Composable
-fun MainScreen() {
+fun MainScreen(pullSyncViewModel: PullSyncViewModel = hiltViewModel()) {
+    val isPulling by pullSyncViewModel.isPulling.collectAsStateWithLifecycle()
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -69,9 +75,16 @@ fun MainScreen() {
             }
         }
     ) { innerPadding ->
-        NavGraph(
-            navController = navController,
-            modifier = Modifier.padding(innerPadding),
-        )
+        Column(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+            // Indicador mínimo del pull en background (Historia 4.2, AC-1) — sin bloquear
+            // navegación ni interacción. Historia 4.3 generalizará este patrón en la app bar.
+            if (isPulling) {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            }
+            NavGraph(
+                navController = navController,
+                modifier = Modifier.weight(1f),
+            )
+        }
     }
 }

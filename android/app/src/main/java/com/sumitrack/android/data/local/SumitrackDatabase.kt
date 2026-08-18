@@ -14,6 +14,7 @@ import com.sumitrack.android.data.local.dao.ProductVariantDao
 import com.sumitrack.android.data.local.dao.SaleDao
 import com.sumitrack.android.data.local.dao.SaleItemDao
 import com.sumitrack.android.data.local.dao.SettingsDao
+import com.sumitrack.android.data.local.dao.SyncMetadataDao
 import com.sumitrack.android.data.local.entities.ClientEntity
 import com.sumitrack.android.data.local.entities.CreditBalanceEntity
 import com.sumitrack.android.data.local.entities.InstallmentEntity
@@ -23,6 +24,7 @@ import com.sumitrack.android.data.local.entities.ProductVariantEntity
 import com.sumitrack.android.data.local.entities.SaleEntity
 import com.sumitrack.android.data.local.entities.SaleItemEntity
 import com.sumitrack.android.data.local.entities.SettingsEntity
+import com.sumitrack.android.data.local.entities.SyncMetadataEntity
 
 @Database(
     entities = [
@@ -35,8 +37,9 @@ import com.sumitrack.android.data.local.entities.SettingsEntity
         InstallmentEntity::class,
         PaymentEntity::class,
         CreditBalanceEntity::class,
+        SyncMetadataEntity::class,
     ],
-    version = 7,
+    version = 8,
     exportSchema = true,
 )
 @TypeConverters(BigDecimalConverter::class, InstantConverter::class)
@@ -50,4 +53,5 @@ abstract class SumitrackDatabase : RoomDatabase() {
     abstract fun installmentDao(): InstallmentDao
     abstract fun paymentDao(): PaymentDao
     abstract fun creditBalanceDao(): CreditBalanceDao
+    abstract fun syncMetadataDao(): SyncMetadataDao
 }

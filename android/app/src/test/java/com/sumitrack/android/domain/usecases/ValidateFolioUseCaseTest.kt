@@ -5,6 +5,7 @@ import com.sumitrack.android.data.local.entities.SettingsEntity
 import com.sumitrack.android.data.remote.api.SettingsApiService
 import com.sumitrack.android.data.remote.dto.SettingDto
 import com.sumitrack.android.data.repositories.SettingsRepository
+import com.sumitrack.android.sync.FakeFolioBaselineStore
 import com.sumitrack.android.ui.screens.clients.FakeSaleDao
 import com.sumitrack.android.ui.screens.orders.FakeSettingsDao
 import java.math.BigDecimal
@@ -19,6 +20,7 @@ class ValidateFolioUseCaseTest {
     private lateinit var fakeSaleDao: FakeSaleDao
     private lateinit var fakeSettingsDao: FakeSettingsDao
     private lateinit var settingsRepository: SettingsRepository
+    private lateinit var fakeFolioBaselineStore: FakeFolioBaselineStore
     private lateinit var useCase: ValidateFolioUseCase
 
     private val noOpApiService = object : SettingsApiService {
@@ -30,7 +32,8 @@ class ValidateFolioUseCaseTest {
         fakeSaleDao = FakeSaleDao()
         fakeSettingsDao = FakeSettingsDao()
         settingsRepository = SettingsRepository(fakeSettingsDao, noOpApiService)
-        useCase = ValidateFolioUseCase(fakeSaleDao, settingsRepository)
+        fakeFolioBaselineStore = FakeFolioBaselineStore()
+        useCase = ValidateFolioUseCase(fakeSaleDao, settingsRepository, fakeFolioBaselineStore)
     }
 
     private fun sale(id: String, tenantId: String = "tenant-1") = SaleEntity(
@@ -82,5 +85,39 @@ class ValidateFolioUseCaseTest {
         val folio = useCase("tenant-1")
 
         assertEquals("A1", folio)
+    }
+
+    @Test
+    fun `folio considers sales inserted via pull, not just ones created locally`() = runTest {
+        // PullService.pullVentas hace saleDao.upsertAll(...) sobre las mismas filas — desde el
+        // punto de vista de este use case no hay diferencia entre una venta creada localmente y
+        // una descargada del servidor (AR-10, Historia 4.2).
+        fakeSaleDao.upsertAll(listOf(sale("pulled-1"), sale("pulled-2")))
+
+        val folio = useCase("tenant-1")
+
+        assertEquals("A3", folio)
+    }
+
+    @Test
+    fun `folio usa el piso del servidor cuando excede el conteo local (sales aun no pulled)`() = runTest {
+        // Simula el escenario que motivó el fix: el pull completo de ventas todavía no ha
+        // terminado (sales local vacío), pero PullService.pullFolioCount() ya confirmó que el
+        // servidor tiene 5 ventas — el folio no debe colisionar con esas 5.
+        fakeFolioBaselineStore.saveFolioBaseline(5)
+
+        val folio = useCase("tenant-1")
+
+        assertEquals("A6", folio)
+    }
+
+    @Test
+    fun `folio usa el conteo local cuando supera el piso del servidor`() = runTest {
+        fakeFolioBaselineStore.saveFolioBaseline(1)
+        fakeSaleDao.setSales(listOf(sale("s1"), sale("s2"), sale("s3")))
+
+        val folio = useCase("tenant-1")
+
+        assertEquals("A4", folio)
     }
 }

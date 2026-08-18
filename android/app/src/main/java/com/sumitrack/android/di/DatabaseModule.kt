@@ -15,6 +15,7 @@ import com.sumitrack.android.data.local.dao.ProductVariantDao
 import com.sumitrack.android.data.local.dao.SaleDao
 import com.sumitrack.android.data.local.dao.SaleItemDao
 import com.sumitrack.android.data.local.dao.SettingsDao
+import com.sumitrack.android.data.local.dao.SyncMetadataDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -72,4 +73,8 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideTransactionRunner(db: SumitrackDatabase): TransactionRunner = RoomTransactionRunner(db)
+
+    @Provides
+    @Singleton
+    fun provideSyncMetadataDao(db: SumitrackDatabase): SyncMetadataDao = db.syncMetadataDao()
 }

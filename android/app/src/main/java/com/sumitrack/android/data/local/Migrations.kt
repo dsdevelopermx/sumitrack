@@ -177,6 +177,20 @@ object Migrations {
         }
     }
 
-    val ALL: Array<Migration> =
-        arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
+    val MIGRATION_7_8 = object : Migration(7, 8) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS sync_metadata (
+                    entity TEXT NOT NULL PRIMARY KEY,
+                    last_sync_at INTEGER NOT NULL
+                )
+                """.trimIndent()
+            )
+        }
+    }
+
+    val ALL: Array<Migration> = arrayOf(
+        MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8,
+    )
 }
