@@ -14,8 +14,13 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -25,6 +30,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.sumitrack.android.sync.SyncEvent
+import com.sumitrack.android.sync.SyncStatusViewModel
+import com.sumitrack.android.ui.components.OfflineBanner
 import com.sumitrack.android.ui.navigation.NavGraph
 import com.sumitrack.android.ui.navigation.Routes
 import com.sumitrack.android.ui.theme.PrimaryVariant
@@ -32,8 +40,10 @@ import com.sumitrack.android.ui.theme.PrimaryVariant
 private data class NavTab(val route: String, val label: String, val icon: ImageVector)
 
 @Composable
-fun MainScreen(pullSyncViewModel: PullSyncViewModel = hiltViewModel()) {
-    val isPulling by pullSyncViewModel.isPulling.collectAsStateWithLifecycle()
+fun MainScreen(viewModel: SyncStatusViewModel = hiltViewModel()) {
+    val isSyncing by viewModel.isSyncing.collectAsStateWithLifecycle()
+    val isOffline by viewModel.isOffline.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -46,8 +56,28 @@ fun MainScreen(pullSyncViewModel: PullSyncViewModel = hiltViewModel()) {
         )
     }
 
+    LaunchedEffect(Unit) {
+        viewModel.syncEvents.collect { event ->
+            when (event) {
+                is SyncEvent.Success -> snackbarHostState.showSnackbar(
+                    "Sincronizado correctamente ☁",
+                    duration = SnackbarDuration.Short,
+                )
+                is SyncEvent.Failure -> {
+                    val result = snackbarHostState.showSnackbar(
+                        message = "Error al sincronizar.",
+                        actionLabel = "Reintentar",
+                        duration = SnackbarDuration.Indefinite,
+                    )
+                    if (result == SnackbarResult.ActionPerformed) viewModel.retryPush()
+                }
+            }
+        }
+    }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             NavigationBar {
                 tabs.forEach { tab ->
@@ -76,9 +106,10 @@ fun MainScreen(pullSyncViewModel: PullSyncViewModel = hiltViewModel()) {
         }
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
-            // Indicador mínimo del pull en background (Historia 4.2, AC-1) — sin bloquear
-            // navegación ni interacción. Historia 4.3 generalizará este patrón en la app bar.
-            if (isPulling) {
+            if (isOffline) {
+                OfflineBanner(modifier = Modifier.fillMaxWidth())
+            }
+            if (isSyncing) {
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             }
             NavGraph(

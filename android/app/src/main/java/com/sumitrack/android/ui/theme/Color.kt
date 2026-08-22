@@ -22,3 +22,6 @@ val StatusCancelled = Color(0xFF9E9E9E)
 // Sync — EXCLUSIVO para indicadores de sincronización, no usar en otro contexto
 val SyncOk      = Color(0xFF00BCD4)  // solo íconos ≥20dp sobre blanco
 val SyncPending = Color(0xFFFF7043)  // solo íconos, nunca texto
+
+// Banner offline (AC-4) — franja no intrusiva, requiere contraste suficiente para texto encima
+val SyncOfflineBanner = Color(0xFFECEFF1)

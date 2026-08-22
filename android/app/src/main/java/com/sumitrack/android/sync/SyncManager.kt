@@ -29,6 +29,8 @@ import com.sumitrack.android.data.remote.dto.SaleItemSyncDto
 import com.sumitrack.android.data.remote.dto.SaleSyncDto
 import com.sumitrack.android.data.remote.dto.SettingSyncDto
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -55,8 +57,14 @@ class SyncManager @Inject constructor(
     private val settingsDao: SettingsDao,
     private val syncApiService: SyncApiService,
 ) {
-    suspend fun pushPending(tenantId: String): Boolean {
-        return pushClientes(tenantId) &&
+    // Mutex de proceso: push-sync (periódico) y push-sync-now (manual, Historia 4.3) son nombres
+    // de trabajo de WorkManager DISTINTOS a propósito (para no colisionar/reemplazarse entre sí),
+    // lo que significa que WorkManager no impide que ambos ejecuten pushPending concurrentemente —
+    // sin este lock, el mismo lote pendiente podría enviarse duplicado al backend.
+    private val pushMutex = Mutex()
+
+    suspend fun pushPending(tenantId: String): Boolean = pushMutex.withLock {
+        pushClientes(tenantId) &&
             pushProductos(tenantId) &&
             pushVariantes(tenantId) &&
             pushVentas(tenantId) &&
@@ -65,6 +73,22 @@ class SyncManager @Inject constructor(
             pushCobros(tenantId) &&
             pushCreditosAFavor(tenantId) &&
             pushSettings()
+    }
+
+    // Chequeo barato de si hay algo pendiente en cualquiera de las 9 entidades — usado por
+    // PushWorker (Historia 4.3) para decidir si un push exitoso amerita notificar a la UI
+    // (evita un Snackbar "Sincronizado correctamente" en cada corrida periódica silenciosa cuando
+    // no había nada que sincronizar, que sería la mayoría de las veces en estado estable).
+    suspend fun hasPendingWork(tenantId: String): Boolean {
+        return clientDao.getPending(tenantId).isNotEmpty() ||
+            productDao.getPending(tenantId).isNotEmpty() ||
+            productVariantDao.getPending(tenantId).isNotEmpty() ||
+            saleDao.getPending(tenantId).isNotEmpty() ||
+            saleItemDao.getPending(tenantId).isNotEmpty() ||
+            installmentDao.getPending(tenantId).isNotEmpty() ||
+            paymentDao.getPending(tenantId).isNotEmpty() ||
+            creditBalanceDao.getPending(tenantId).isNotEmpty() ||
+            settingsDao.getPending().isNotEmpty()
     }
 
     // Ejecuta el push de un lote: llama a la API, marca `synced` (vía [markSynced], un UPDATE

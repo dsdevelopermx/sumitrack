@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sumitrack.android.data.repositories.ClientRepository
 import com.sumitrack.android.domain.models.Client
+import com.sumitrack.android.sync.PushSyncTrigger
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,6 +20,7 @@ import javax.inject.Inject
 @HiltViewModel
 class ClientListViewModel @Inject constructor(
     private val clientRepository: ClientRepository,
+    private val pushSyncTrigger: PushSyncTrigger,
 ) : ViewModel() {
 
     private val _searchQuery = MutableStateFlow("")
@@ -48,4 +50,6 @@ class ClientListViewModel @Inject constructor(
     fun onSearchClear() {
         _searchQuery.value = ""
     }
+
+    fun onRefresh() = pushSyncTrigger()
 }

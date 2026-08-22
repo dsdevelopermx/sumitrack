@@ -176,4 +176,16 @@ class SyncManagerTest {
         assertEquals("Juan Pérez", stored.name)
         assertEquals("synced", stored.syncStatus)
     }
+
+    @Test
+    fun `hasPendingWork es false cuando ninguna de las 9 entidades tiene pendientes`() = runTest {
+        assertFalse(syncManager.hasPendingWork(tenantId))
+    }
+
+    @Test
+    fun `hasPendingWork es true si una sola entidad tiene pendientes`() = runTest {
+        productDao.setProducts(listOf(pendingProduct()))
+
+        assertTrue(syncManager.hasPendingWork(tenantId))
+    }
 }

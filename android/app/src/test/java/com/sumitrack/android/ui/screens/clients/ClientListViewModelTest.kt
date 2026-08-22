@@ -9,6 +9,7 @@ import com.sumitrack.android.data.repositories.ClientRepository
 import com.sumitrack.android.data.repositories.SaleRepository
 import com.sumitrack.android.domain.models.Client
 import com.sumitrack.android.domain.usecases.CalculateClientBalanceUseCase
+import com.sumitrack.android.sync.PushSyncTrigger
 import com.sumitrack.android.ui.screens.orders.FakeCreditBalanceDao
 import com.sumitrack.android.ui.screens.orders.FakeInstallmentDao
 import com.sumitrack.android.ui.screens.orders.FakePaymentDao
@@ -50,7 +51,7 @@ class ClientListViewModelTest {
                 SaleRepository(FakeTransactionRunner(), FakeSaleDao(), FakeSaleItemDao(), FakeInstallmentDao(), FakePaymentDao(), FakeCreditBalanceDao())
             ),
         )
-        viewModel = ClientListViewModel(repo)
+        viewModel = ClientListViewModel(repo, PushSyncTrigger {})
     }
 
     @After
@@ -129,6 +130,22 @@ class ClientListViewModelTest {
         assertEquals(1, result.size)
         assertEquals("Ana López", result.first().name)
         job.cancel()
+    }
+
+    @Test
+    fun `onRefresh invoca al PushSyncTrigger inyectado`() {
+        var callCount = 0
+        val repo = ClientRepository(
+            fakeDao,
+            CalculateClientBalanceUseCase(
+                SaleRepository(FakeTransactionRunner(), FakeSaleDao(), FakeSaleItemDao(), FakeInstallmentDao(), FakePaymentDao(), FakeCreditBalanceDao())
+            ),
+        )
+        val vm = ClientListViewModel(repo, PushSyncTrigger { callCount++ })
+
+        vm.onRefresh()
+
+        assertEquals(1, callCount)
     }
 
     private fun makeEntity(id: String, name: String) = ClientEntity(

@@ -151,7 +151,7 @@ fun OrderListScreen(
 
             PullToRefreshBox(
                 isRefreshing = false,
-                onRefresh = { /* TODO Historia 4.x: trigger sync */ },
+                onRefresh = { viewModel.onRefresh() },
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth(),

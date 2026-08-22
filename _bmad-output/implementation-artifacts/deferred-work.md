@@ -1,4 +1,12 @@
 
+## Deferred from: code review de 4-3-indicadores-de-sincronizacion-en-la-ui (2026-08-22)
+
+- **Race entre `registerNetworkCallback` y la lectura de `activeNetwork` en `ConnectivityObserver`** — si la red cambia justo en ese intervalo, el callback puede emitir `trySend` y luego la lectura de "estado actual" (potencialmente obsoleta) lo sobrescribe. Ventana angosta y autocorregible: el próximo callback de red la corrige. [ConnectivityObserver.kt]
+- **TOCTOU entre `hasPendingWork` y `pushPending` en `PushWorker`** — si se inserta un registro pendiente nuevo justo después del chequeo pero antes/durante el push, el Snackbar de éxito puede omitirse puntualmente aunque el dato sí se sincronizó correctamente. [PushWorker.kt]
+- **Con el Snackbar de error en `SnackbarDuration.Indefinite`, un segundo `SyncEvent` que llegue mientras sigue abierto puede perderse** — el colector está suspendido dentro de `showSnackbar`. Mitigado en parte por el fix del hallazgo de `SyncEventBus` (el Worker ya no queda colgado esperando), pero construir cola/cancelación de Snackbars sería scope creep para esta ronda. [MainScreen.kt]
+- **`ExistingWorkPolicy.REPLACE` en `push-sync-now` cancela un push en curso ante un doble tap de "Reintentar"/pull-to-refresh** — no es dañino porque el push es incremental por entidad (idempotente), la próxima corrida retoma donde quedó, pero desperdicia la llamada de red en curso. [TriggerPushSyncUseCase.kt]
+- **El `catch` de `PushWorker` emite `SyncEvent.Failure` aunque la excepción haya ocurrido dentro de `hasPendingWork()` mismo**, sin saber si realmente había algo pendiente que sincronizar — es un default seguro razonable ante fallo del propio chequeo, no una corrección necesaria. [PushWorker.kt]
+
 ## Deferred from: code review de 4-2-pull-inicial-y-folio-del-servidor-al-hacer-login (2026-08-09)
 
 - **Un registro individual malformado del servidor (timestamp inválido, etc.) falla el pull completo de esa entidad** vía el catch-all de excepción en `PullService`, y se reintentará para siempre porque `last_sync_at` nunca avanza más allá de él. Baja probabilidad práctica dado que la validación de campo agregada al push en la revisión de 4.1 ya evita que datos malformados lleguen a persistirse en el servidor. [PullService.kt]

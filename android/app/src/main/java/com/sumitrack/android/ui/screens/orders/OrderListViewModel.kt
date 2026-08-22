@@ -6,6 +6,7 @@ import com.sumitrack.android.data.repositories.SaleRepository
 import com.sumitrack.android.di.TenantId
 import com.sumitrack.android.domain.models.OrderSummary
 import com.sumitrack.android.domain.models.SaleStatus
+import com.sumitrack.android.sync.PushSyncTrigger
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -26,6 +27,7 @@ import javax.inject.Inject
 class OrderListViewModel @Inject constructor(
     private val saleRepository: SaleRepository,
     @TenantId private val tenantId: Flow<String?>,
+    private val pushSyncTrigger: PushSyncTrigger,
 ) : ViewModel() {
 
     private val _searchQuery = MutableStateFlow("")
@@ -60,4 +62,6 @@ class OrderListViewModel @Inject constructor(
     fun onStatusFilterSelected(status: SaleStatus?) {
         _statusFilter.value = status
     }
+
+    fun onRefresh() = pushSyncTrigger()
 }

@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-06-27
-last_updated: 2026-08-09  # updated: 4-2 → done (code review completo, decision-needed resuelto con folio-count)
+last_updated: 2026-08-22  # updated: 4-3 → done (code review completo, 11 patches aplicados)
 project: sumitrack
 project_key: NOKEY
 tracking_system: file-system
@@ -73,7 +73,7 @@ development_status:
   epic-4: in-progress
   4-1-motor-de-sincronizacion-push-en-background: done
   4-2-pull-inicial-y-folio-del-servidor-al-hacer-login: done
-  4-3-indicadores-de-sincronizacion-en-la-ui: backlog
+  4-3-indicadores-de-sincronizacion-en-la-ui: done
   4-4-deteccion-y-resolucion-de-conflictos: backlog
   epic-4-retrospective: optional
 

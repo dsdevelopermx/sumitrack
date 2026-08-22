@@ -2,6 +2,12 @@ package com.sumitrack.android.di
 
 import android.content.Context
 import androidx.work.WorkManager
+import com.sumitrack.android.sync.AndroidConnectivityObserver
+import com.sumitrack.android.sync.ConnectivityObserver
+import com.sumitrack.android.sync.PushSyncTrigger
+import com.sumitrack.android.sync.SyncWorkObserver
+import com.sumitrack.android.sync.TriggerPushSyncUseCase
+import com.sumitrack.android.sync.WorkManagerSyncWorkObserver
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -19,4 +25,18 @@ object SyncModule {
     @Provides
     @Singleton
     fun provideWorkManager(@ApplicationContext context: Context): WorkManager = WorkManager.getInstance(context)
+
+    @Provides
+    @Singleton
+    fun provideSyncWorkObserver(workManager: WorkManager): SyncWorkObserver =
+        WorkManagerSyncWorkObserver(workManager)
+
+    @Provides
+    @Singleton
+    fun provideConnectivityObserver(@ApplicationContext context: Context): ConnectivityObserver =
+        AndroidConnectivityObserver(context)
+
+    @Provides
+    @Singleton
+    fun providePushSyncTrigger(useCase: TriggerPushSyncUseCase): PushSyncTrigger = useCase
 }

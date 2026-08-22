@@ -3,6 +3,7 @@ package com.sumitrack.android.ui.screens.orders
 import com.sumitrack.android.data.local.entities.SaleEntity
 import com.sumitrack.android.data.repositories.SaleRepository
 import com.sumitrack.android.domain.models.SaleStatus
+import com.sumitrack.android.sync.PushSyncTrigger
 import com.sumitrack.android.ui.screens.clients.FakeSaleDao
 import com.sumitrack.android.ui.screens.products.FakeTransactionRunner
 import java.math.BigDecimal
@@ -41,8 +42,8 @@ class OrderListViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel(tenantId: String? = "tenant-1") =
-        OrderListViewModel(repository, flowOf(tenantId))
+    private fun viewModel(tenantId: String? = "tenant-1", pushSyncTrigger: PushSyncTrigger = PushSyncTrigger {}) =
+        OrderListViewModel(repository, flowOf(tenantId), pushSyncTrigger)
 
     private fun sale(
         id: String,
@@ -165,5 +166,15 @@ class OrderListViewModelTest {
         vm.onSearchQueryChange("algo")
         vm.onSearchClear()
         assertEquals("", vm.searchQuery.value)
+    }
+
+    @Test
+    fun `onRefresh invoca al PushSyncTrigger inyectado`() = runTest {
+        var callCount = 0
+        val vm = viewModel(pushSyncTrigger = PushSyncTrigger { callCount++ })
+
+        vm.onRefresh()
+
+        assertEquals(1, callCount)
     }
 }
