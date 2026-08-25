@@ -190,7 +190,28 @@ object Migrations {
         }
     }
 
+    val MIGRATION_8_9 = object : Migration(8, 9) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS conflict_log (
+                    id TEXT NOT NULL PRIMARY KEY,
+                    fk_tenant TEXT NOT NULL,
+                    entity_type TEXT NOT NULL,
+                    record_id TEXT NOT NULL,
+                    local_snapshot TEXT NOT NULL,
+                    server_snapshot TEXT NOT NULL,
+                    detected_at INTEGER NOT NULL,
+                    resolved_at INTEGER,
+                    resolution TEXT,
+                    duplicate_record_id TEXT
+                )
+                """.trimIndent()
+            )
+        }
+    }
+
     val ALL: Array<Migration> = arrayOf(
-        MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8,
+        MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9,
     )
 }

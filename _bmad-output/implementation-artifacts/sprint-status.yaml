@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-06-27
-last_updated: 2026-08-22  # updated: 4-3 → done (code review completo, 11 patches aplicados)
+last_updated: 2026-08-23  # updated: 4-4 → review (implementación completa, T1-T16)
 project: sumitrack
 project_key: NOKEY
 tracking_system: file-system
@@ -74,7 +74,7 @@ development_status:
   4-1-motor-de-sincronizacion-push-en-background: done
   4-2-pull-inicial-y-folio-del-servidor-al-hacer-login: done
   4-3-indicadores-de-sincronizacion-en-la-ui: done
-  4-4-deteccion-y-resolucion-de-conflictos: backlog
+  4-4-deteccion-y-resolucion-de-conflictos: done
   epic-4-retrospective: optional
 
   # ─── Epic 5: Agenda de Cobros, Notificaciones y Configuración ───

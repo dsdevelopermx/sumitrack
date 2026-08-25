@@ -39,4 +39,10 @@ sealed class Routes(val route: String) {
     object OrderDetail : Routes("order_detail/{saleId}") {
         fun createRoute(saleId: String): String = "order_detail/$saleId"
     }
+
+    object Conflict : Routes("conflict/{entityType}/{recordId}") {
+        fun createRoute(entityType: String, recordId: String): String = "conflict/$entityType/$recordId"
+    }
+
+    object ConflictLog : Routes("conflict_log")
 }

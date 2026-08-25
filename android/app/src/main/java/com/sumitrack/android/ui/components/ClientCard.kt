@@ -15,13 +15,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.sumitrack.android.domain.models.Client
-import com.sumitrack.android.domain.models.SyncStatus
 import java.math.RoundingMode
 
 @Composable
 fun ClientCard(
     client: Client,
     onClick: () -> Unit,
+    onConflictClick: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     ElevatedCard(
@@ -55,7 +55,7 @@ fun ClientCard(
                     color = MaterialTheme.colorScheme.primary,
                 )
             }
-            SyncIcon(isSynced = client.syncStatus == SyncStatus.SYNCED)
+            SyncIcon(status = client.syncStatus, onConflictClick = onConflictClick)
         }
     }
 }

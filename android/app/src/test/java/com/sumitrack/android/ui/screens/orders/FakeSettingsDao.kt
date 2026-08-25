@@ -26,7 +26,16 @@ class FakeSettingsDao : SettingsDao {
     override suspend fun getPending(): List<SettingsEntity> =
         allFlow.value.filter { it.syncStatus == "pending" }
 
+    override suspend fun getConflicted(): List<SettingsEntity> =
+        allFlow.value.filter { it.syncStatus == "conflict" }
+
     override suspend fun markSynced(keys: List<String>) {
         allFlow.value = allFlow.value.map { if (it.key in keys) it.copy(syncStatus = "synced") else it }
     }
+
+    override suspend fun markConflict(keys: List<String>) {
+        allFlow.value = allFlow.value.map { if (it.key in keys) it.copy(syncStatus = "conflict") else it }
+    }
+
+    override suspend fun getByKey(key: String): SettingsEntity? = allFlow.value.find { it.key == key }
 }

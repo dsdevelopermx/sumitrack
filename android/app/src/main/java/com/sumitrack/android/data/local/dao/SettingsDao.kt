@@ -18,12 +18,21 @@ interface SettingsDao {
     @Query("SELECT value FROM settings WHERE key = :key LIMIT 1")
     suspend fun getValue(key: String): String?
 
+    @Query("SELECT * FROM settings WHERE key = :key LIMIT 1")
+    suspend fun getByKey(key: String): SettingsEntity?
+
     @Query("DELETE FROM settings")
     suspend fun deleteAll()
 
     @Query("SELECT * FROM settings WHERE sync_status = 'pending'")
     suspend fun getPending(): List<SettingsEntity>
 
+    @Query("SELECT * FROM settings WHERE sync_status = 'conflict'")
+    suspend fun getConflicted(): List<SettingsEntity>
+
     @Query("UPDATE settings SET sync_status = 'synced' WHERE key IN (:keys)")
     suspend fun markSynced(keys: List<String>)
+
+    @Query("UPDATE settings SET sync_status = 'conflict' WHERE key IN (:keys)")
+    suspend fun markConflict(keys: List<String>)
 }

@@ -33,6 +33,7 @@ class SyncManagerTest {
     private lateinit var paymentDao: FakePaymentDao
     private lateinit var creditBalanceDao: FakeCreditBalanceDao
     private lateinit var settingsDao: FakeSettingsDao
+    private lateinit var conflictLogDao: FakeConflictLogDao
     private lateinit var apiService: FakeSyncApiService
     private lateinit var syncManager: SyncManager
 
@@ -49,6 +50,7 @@ class SyncManagerTest {
         paymentDao = FakePaymentDao()
         creditBalanceDao = FakeCreditBalanceDao()
         settingsDao = FakeSettingsDao()
+        conflictLogDao = FakeConflictLogDao()
         apiService = FakeSyncApiService()
         syncManager = SyncManager(
             clientDao = clientDao,
@@ -60,6 +62,7 @@ class SyncManagerTest {
             paymentDao = paymentDao,
             creditBalanceDao = creditBalanceDao,
             settingsDao = settingsDao,
+            conflictLogDao = conflictLogDao,
             syncApiService = apiService,
         )
     }
@@ -187,5 +190,26 @@ class SyncManagerTest {
         productDao.setProducts(listOf(pendingProduct()))
 
         assertTrue(syncManager.hasPendingWork(tenantId))
+    }
+
+    @Test
+    fun `pushPending marca conflict (no pending ni synced) cuando el backend reporta conflicto`() = runTest {
+        clientDao.setClients(listOf(pendingClient(id = "c1")))
+        apiService.conflictedIds = setOf("c1")
+
+        val result = syncManager.pushPending(tenantId)
+
+        assertTrue(result) // el batch en sí no falló — un conflicto es un resultado por-registro
+        val stored = clientDao.getAllAsFlow().first().single { it.id == "c1" }
+        assertEquals("conflict", stored.syncStatus)
+
+        assertEquals(1, conflictLogDao.rows.size)
+        val logEntry = conflictLogDao.rows.single()
+        assertEquals("clientes", logEntry.entityType)
+        assertEquals("c1", logEntry.recordId)
+        assertEquals(tenantId, logEntry.fkTenant)
+        assertTrue(logEntry.localSnapshotJson.contains("c1"))
+        assertTrue(logEntry.serverSnapshotJson.contains("c1"))
+        assertEquals(null, logEntry.resolvedAt)
     }
 }

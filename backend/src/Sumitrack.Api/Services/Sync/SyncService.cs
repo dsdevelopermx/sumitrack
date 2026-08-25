@@ -90,6 +90,17 @@ public class SyncService : ISyncService
             }
 
             var existing = await _ctx.Clients.FindAsync([item.Id], ct);
+            if (existing is not null && existing.UpdatedAt > NormalizeUtc(item.UpdatedAt))
+            {
+                results.Add(new PushSyncResponseItem
+                {
+                    Id = item.Id,
+                    Success = false,
+                    Conflict = true,
+                    ServerSnapshot = JsonSerializer.Serialize(existing, JsonOptions),
+                });
+                continue;
+            }
             if (existing is null)
             {
                 _ctx.Clients.Add(new Client
@@ -159,6 +170,17 @@ public class SyncService : ISyncService
             }
 
             var existing = await _ctx.Products.FindAsync([item.Id], ct);
+            if (existing is not null && existing.UpdatedAt > NormalizeUtc(item.UpdatedAt))
+            {
+                results.Add(new PushSyncResponseItem
+                {
+                    Id = item.Id,
+                    Success = false,
+                    Conflict = true,
+                    ServerSnapshot = JsonSerializer.Serialize(existing, JsonOptions),
+                });
+                continue;
+            }
             if (existing is null)
             {
                 _ctx.Products.Add(new Product
@@ -225,6 +247,17 @@ public class SyncService : ISyncService
             }
 
             var existing = await _ctx.ProductVariants.FindAsync([item.Id], ct);
+            if (existing is not null && existing.UpdatedAt > NormalizeUtc(item.UpdatedAt))
+            {
+                results.Add(new PushSyncResponseItem
+                {
+                    Id = item.Id,
+                    Success = false,
+                    Conflict = true,
+                    ServerSnapshot = JsonSerializer.Serialize(existing, JsonOptions),
+                });
+                continue;
+            }
             if (existing is null)
             {
                 _ctx.ProductVariants.Add(new ProductVariant
@@ -286,6 +319,17 @@ public class SyncService : ISyncService
             }
 
             var existing = await _ctx.Sales.FindAsync([item.Id], ct);
+            if (existing is not null && existing.UpdatedAt > NormalizeUtc(item.UpdatedAt))
+            {
+                results.Add(new PushSyncResponseItem
+                {
+                    Id = item.Id,
+                    Success = false,
+                    Conflict = true,
+                    ServerSnapshot = JsonSerializer.Serialize(existing, JsonOptions),
+                });
+                continue;
+            }
             if (existing is null)
             {
                 _ctx.Sales.Add(new Sale
@@ -360,6 +404,17 @@ public class SyncService : ISyncService
             }
 
             var existing = await _ctx.SaleItems.FindAsync([item.Id], ct);
+            if (existing is not null && existing.UpdatedAt > NormalizeUtc(item.UpdatedAt))
+            {
+                results.Add(new PushSyncResponseItem
+                {
+                    Id = item.Id,
+                    Success = false,
+                    Conflict = true,
+                    ServerSnapshot = JsonSerializer.Serialize(existing, JsonOptions),
+                });
+                continue;
+            }
             if (existing is null)
             {
                 _ctx.SaleItems.Add(new SaleItem
@@ -438,6 +493,17 @@ public class SyncService : ISyncService
             }
 
             var existing = await _ctx.Installments.FindAsync([item.Id], ct);
+            if (existing is not null && existing.UpdatedAt > NormalizeUtc(item.UpdatedAt))
+            {
+                results.Add(new PushSyncResponseItem
+                {
+                    Id = item.Id,
+                    Success = false,
+                    Conflict = true,
+                    ServerSnapshot = JsonSerializer.Serialize(existing, JsonOptions),
+                });
+                continue;
+            }
             if (existing is null)
             {
                 _ctx.Installments.Add(new Installment
@@ -504,6 +570,17 @@ public class SyncService : ISyncService
             }
 
             var existing = await _ctx.Payments.FindAsync([item.Id], ct);
+            if (existing is not null && existing.UpdatedAt > NormalizeUtc(item.UpdatedAt))
+            {
+                results.Add(new PushSyncResponseItem
+                {
+                    Id = item.Id,
+                    Success = false,
+                    Conflict = true,
+                    ServerSnapshot = JsonSerializer.Serialize(existing, JsonOptions),
+                });
+                continue;
+            }
             if (existing is null)
             {
                 _ctx.Payments.Add(new Payment
@@ -572,6 +649,17 @@ public class SyncService : ISyncService
             }
 
             var existing = await _ctx.CreditBalances.FindAsync([item.Id], ct);
+            if (existing is not null && existing.UpdatedAt > NormalizeUtc(item.UpdatedAt))
+            {
+                results.Add(new PushSyncResponseItem
+                {
+                    Id = item.Id,
+                    Success = false,
+                    Conflict = true,
+                    ServerSnapshot = JsonSerializer.Serialize(existing, JsonOptions),
+                });
+                continue;
+            }
             if (existing is null)
             {
                 _ctx.CreditBalances.Add(new CreditBalance
@@ -639,6 +727,17 @@ public class SyncService : ISyncService
             }
 
             var existing = await _ctx.Settings.FindAsync([item.Key], ct);
+            if (existing is not null && existing.UpdatedAt > NormalizeUtc(item.UpdatedAt))
+            {
+                results.Add(new SettingSyncResponseItem
+                {
+                    Key = item.Key,
+                    Success = false,
+                    Conflict = true,
+                    ServerSnapshot = JsonSerializer.Serialize(existing, JsonOptions),
+                });
+                continue;
+            }
             if (existing is null)
             {
                 _ctx.Settings.Add(new Setting

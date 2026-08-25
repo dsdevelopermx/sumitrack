@@ -32,7 +32,14 @@ class FakeProductDao : ProductDao {
     override suspend fun getPending(tenantId: String): List<ProductEntity> =
         allFlow.value.filter { it.fkTenant == tenantId && it.syncStatus == "pending" }
 
+    override suspend fun getConflicted(tenantId: String): List<ProductEntity> =
+        allFlow.value.filter { it.fkTenant == tenantId && it.syncStatus == "conflict" }
+
     override suspend fun markSynced(ids: List<String>) {
         allFlow.value = allFlow.value.map { if (it.id in ids) it.copy(syncStatus = "synced") else it }
+    }
+
+    override suspend fun markConflict(ids: List<String>) {
+        allFlow.value = allFlow.value.map { if (it.id in ids) it.copy(syncStatus = "conflict") else it }
     }
 }

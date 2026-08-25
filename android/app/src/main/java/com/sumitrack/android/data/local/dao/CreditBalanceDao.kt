@@ -11,12 +11,21 @@ interface CreditBalanceDao {
     @Query("SELECT * FROM credit_balances WHERE fk_client = :clientId AND fk_tenant = :tenantId")
     suspend fun getForClient(clientId: String, tenantId: String): List<CreditBalanceEntity>
 
+    @Query("SELECT * FROM credit_balances WHERE id = :id")
+    suspend fun getById(id: String): CreditBalanceEntity?
+
     @Upsert
     suspend fun upsertAll(rows: List<CreditBalanceEntity>)
 
     @Query("SELECT * FROM credit_balances WHERE fk_tenant = :tenantId AND sync_status = 'pending'")
     suspend fun getPending(tenantId: String): List<CreditBalanceEntity>
 
+    @Query("SELECT * FROM credit_balances WHERE fk_tenant = :tenantId AND sync_status = 'conflict'")
+    suspend fun getConflicted(tenantId: String): List<CreditBalanceEntity>
+
     @Query("UPDATE credit_balances SET sync_status = 'synced' WHERE id IN (:ids)")
     suspend fun markSynced(ids: List<String>)
+
+    @Query("UPDATE credit_balances SET sync_status = 'conflict' WHERE id IN (:ids)")
+    suspend fun markConflict(ids: List<String>)
 }

@@ -25,6 +25,10 @@ class FakeSyncApiService : SyncApiService {
     // para probar que SyncManager solo marca synced los ids confirmados, no el lote completo.
     var rejectedIds: Set<String> = emptySet()
 
+    // Ids de registros que el backend reporta en conflicto (Historia 4.4) — success=false,
+    // conflict=true, con un serverSnapshot de prueba.
+    var conflictedIds: Set<String> = emptySet()
+
     val calls = mutableListOf<String>()
 
     private fun recordAndMaybeFail(entity: String) {
@@ -34,47 +38,92 @@ class FakeSyncApiService : SyncApiService {
 
     override suspend fun pushClientes(body: List<ClientSyncDto>): List<PushSyncResponseItemDto> {
         recordAndMaybeFail("clientes")
-        return body.map { PushSyncResponseItemDto(id = it.id, success = it.id !in rejectedIds) }
+        return body.map {
+            when {
+                it.id in conflictedIds -> PushSyncResponseItemDto(id = it.id, success = false, conflict = true, serverSnapshot = """{"id":"${it.id}"}""")
+                else -> PushSyncResponseItemDto(id = it.id, success = it.id !in rejectedIds)
+            }
+        }
     }
 
     override suspend fun pushProductos(body: List<ProductSyncDto>): List<PushSyncResponseItemDto> {
         recordAndMaybeFail("productos")
-        return body.map { PushSyncResponseItemDto(id = it.id, success = it.id !in rejectedIds) }
+        return body.map {
+            when {
+                it.id in conflictedIds -> PushSyncResponseItemDto(id = it.id, success = false, conflict = true, serverSnapshot = """{"id":"${it.id}"}""")
+                else -> PushSyncResponseItemDto(id = it.id, success = it.id !in rejectedIds)
+            }
+        }
     }
 
     override suspend fun pushVariantes(body: List<ProductVariantSyncDto>): List<PushSyncResponseItemDto> {
         recordAndMaybeFail("variantes")
-        return body.map { PushSyncResponseItemDto(id = it.id, success = it.id !in rejectedIds) }
+        return body.map {
+            when {
+                it.id in conflictedIds -> PushSyncResponseItemDto(id = it.id, success = false, conflict = true, serverSnapshot = """{"id":"${it.id}"}""")
+                else -> PushSyncResponseItemDto(id = it.id, success = it.id !in rejectedIds)
+            }
+        }
     }
 
     override suspend fun pushVentas(body: List<SaleSyncDto>): List<PushSyncResponseItemDto> {
         recordAndMaybeFail("ventas")
-        return body.map { PushSyncResponseItemDto(id = it.id, success = it.id !in rejectedIds) }
+        return body.map {
+            when {
+                it.id in conflictedIds -> PushSyncResponseItemDto(id = it.id, success = false, conflict = true, serverSnapshot = """{"id":"${it.id}"}""")
+                else -> PushSyncResponseItemDto(id = it.id, success = it.id !in rejectedIds)
+            }
+        }
     }
 
     override suspend fun pushItemsVenta(body: List<SaleItemSyncDto>): List<PushSyncResponseItemDto> {
         recordAndMaybeFail("items_venta")
-        return body.map { PushSyncResponseItemDto(id = it.id, success = it.id !in rejectedIds) }
+        return body.map {
+            when {
+                it.id in conflictedIds -> PushSyncResponseItemDto(id = it.id, success = false, conflict = true, serverSnapshot = """{"id":"${it.id}"}""")
+                else -> PushSyncResponseItemDto(id = it.id, success = it.id !in rejectedIds)
+            }
+        }
     }
 
     override suspend fun pushParcialidades(body: List<InstallmentSyncDto>): List<PushSyncResponseItemDto> {
         recordAndMaybeFail("parcialidades")
-        return body.map { PushSyncResponseItemDto(id = it.id, success = it.id !in rejectedIds) }
+        return body.map {
+            when {
+                it.id in conflictedIds -> PushSyncResponseItemDto(id = it.id, success = false, conflict = true, serverSnapshot = """{"id":"${it.id}"}""")
+                else -> PushSyncResponseItemDto(id = it.id, success = it.id !in rejectedIds)
+            }
+        }
     }
 
     override suspend fun pushCobros(body: List<PaymentSyncDto>): List<PushSyncResponseItemDto> {
         recordAndMaybeFail("cobros")
-        return body.map { PushSyncResponseItemDto(id = it.id, success = it.id !in rejectedIds) }
+        return body.map {
+            when {
+                it.id in conflictedIds -> PushSyncResponseItemDto(id = it.id, success = false, conflict = true, serverSnapshot = """{"id":"${it.id}"}""")
+                else -> PushSyncResponseItemDto(id = it.id, success = it.id !in rejectedIds)
+            }
+        }
     }
 
     override suspend fun pushCreditosAFavor(body: List<CreditBalanceSyncDto>): List<PushSyncResponseItemDto> {
         recordAndMaybeFail("creditos_a_favor")
-        return body.map { PushSyncResponseItemDto(id = it.id, success = it.id !in rejectedIds) }
+        return body.map {
+            when {
+                it.id in conflictedIds -> PushSyncResponseItemDto(id = it.id, success = false, conflict = true, serverSnapshot = """{"id":"${it.id}"}""")
+                else -> PushSyncResponseItemDto(id = it.id, success = it.id !in rejectedIds)
+            }
+        }
     }
 
     override suspend fun pushSettings(body: List<SettingSyncDto>): List<SettingSyncResponseItemDto> {
         recordAndMaybeFail("settings")
-        return body.map { SettingSyncResponseItemDto(key = it.key, success = it.key !in rejectedIds) }
+        return body.map {
+            when {
+                it.key in conflictedIds -> SettingSyncResponseItemDto(key = it.key, success = false, conflict = true, serverSnapshot = """{"key":"${it.key}"}""")
+                else -> SettingSyncResponseItemDto(key = it.key, success = it.key !in rejectedIds)
+            }
+        }
     }
 
     // Nombres de segmento URL cuya próxima llamada de PULL debe fallar simulando error de red.

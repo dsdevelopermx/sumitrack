@@ -56,6 +56,7 @@ fun OrderListScreen(
     modifier: Modifier = Modifier,
     onNewOrderClick: () -> Unit = {},
     onOrderClick: (saleId: String) -> Unit = {},
+    onConflictClick: (recordId: String) -> Unit = {},
     focusFabOnEntry: Boolean = false,
     onFabFocusConsumed: () -> Unit = {},
     viewModel: OrderListViewModel = hiltViewModel(),
@@ -177,6 +178,7 @@ fun OrderListScreen(
                             OrderCard(
                                 order = order,
                                 onClick = { onOrderClick(order.id) },
+                                onConflictClick = { onConflictClick(order.id) },
                                 modifier = Modifier.padding(horizontal = 16.dp),
                             )
                         }

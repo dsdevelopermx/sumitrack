@@ -7,4 +7,6 @@ data class PushSyncResponseItemDto(
     val id: String,
     val success: Boolean,
     val error: String? = null,
+    val conflict: Boolean = false,
+    val serverSnapshot: String? = null,
 )

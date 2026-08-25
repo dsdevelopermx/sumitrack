@@ -24,6 +24,12 @@ interface ProductDao {
     @Query("SELECT * FROM products WHERE fk_tenant = :tenantId AND sync_status = 'pending'")
     suspend fun getPending(tenantId: String): List<ProductEntity>
 
+    @Query("SELECT * FROM products WHERE fk_tenant = :tenantId AND sync_status = 'conflict'")
+    suspend fun getConflicted(tenantId: String): List<ProductEntity>
+
     @Query("UPDATE products SET sync_status = 'synced' WHERE id IN (:ids)")
     suspend fun markSynced(ids: List<String>)
+
+    @Query("UPDATE products SET sync_status = 'conflict' WHERE id IN (:ids)")
+    suspend fun markConflict(ids: List<String>)
 }

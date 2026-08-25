@@ -89,7 +89,14 @@ class FakeSaleDao : SaleDao {
     override suspend fun getPending(tenantId: String): List<SaleEntity> =
         salesFlow.value.filter { it.fkTenant == tenantId && it.syncStatus == "pending" }
 
+    override suspend fun getConflicted(tenantId: String): List<SaleEntity> =
+        salesFlow.value.filter { it.fkTenant == tenantId && it.syncStatus == "conflict" }
+
     override suspend fun markSynced(ids: List<String>) {
         salesFlow.value = salesFlow.value.map { if (it.id in ids) it.copy(syncStatus = "synced") else it }
+    }
+
+    override suspend fun markConflict(ids: List<String>) {
+        salesFlow.value = salesFlow.value.map { if (it.id in ids) it.copy(syncStatus = "conflict") else it }
     }
 }

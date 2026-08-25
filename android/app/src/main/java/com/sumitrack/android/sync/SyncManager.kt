@@ -1,6 +1,7 @@
 package com.sumitrack.android.sync
 
 import com.sumitrack.android.data.local.dao.ClientDao
+import com.sumitrack.android.data.local.dao.ConflictLogDao
 import com.sumitrack.android.data.local.dao.CreditBalanceDao
 import com.sumitrack.android.data.local.dao.InstallmentDao
 import com.sumitrack.android.data.local.dao.PaymentDao
@@ -10,6 +11,7 @@ import com.sumitrack.android.data.local.dao.SaleDao
 import com.sumitrack.android.data.local.dao.SaleItemDao
 import com.sumitrack.android.data.local.dao.SettingsDao
 import com.sumitrack.android.data.local.entities.ClientEntity
+import com.sumitrack.android.data.local.entities.ConflictLogEntity
 import com.sumitrack.android.data.local.entities.CreditBalanceEntity
 import com.sumitrack.android.data.local.entities.InstallmentEntity
 import com.sumitrack.android.data.local.entities.PaymentEntity
@@ -28,9 +30,13 @@ import com.sumitrack.android.data.remote.dto.ProductVariantSyncDto
 import com.sumitrack.android.data.remote.dto.SaleItemSyncDto
 import com.sumitrack.android.data.remote.dto.SaleSyncDto
 import com.sumitrack.android.data.remote.dto.SettingSyncDto
+import java.time.Instant
+import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -55,6 +61,7 @@ class SyncManager @Inject constructor(
     private val paymentDao: PaymentDao,
     private val creditBalanceDao: CreditBalanceDao,
     private val settingsDao: SettingsDao,
+    private val conflictLogDao: ConflictLogDao,
     private val syncApiService: SyncApiService,
 ) {
     // Mutex de proceso: push-sync (periódico) y push-sync-now (manual, Historia 4.3) son nombres
@@ -72,7 +79,7 @@ class SyncManager @Inject constructor(
             pushParcialidades(tenantId) &&
             pushCobros(tenantId) &&
             pushCreditosAFavor(tenantId) &&
-            pushSettings()
+            pushSettings(tenantId)
     }
 
     // Chequeo barato de si hay algo pendiente en cualquiera de las 9 entidades — usado por
@@ -96,19 +103,58 @@ class SyncManager @Inject constructor(
     // deja el resto tal cual (pending). Nunca reescribe el resto de columnas de la entidad — evita
     // que un snapshot leído antes del request pise una edición local concurrente al mismo registro.
     // Relanza CancellationException para no romper la cancelación cooperativa de PushWorker.
+    //
+    // Un conflicto (Historia 4.4) es OTRO resultado por-registro, igual que un rechazo de
+    // validación ya tolerado desde 4.1 — no afecta el resultado agregado (Boolean) de este batch,
+    // solo marca `sync_status = conflict` (en vez de dejarlo `pending`) y persiste un
+    // ConflictLogEntity con ambas versiones para que S-15/S-14 lo resuelvan más tarde.
     private suspend fun <TEntity, TResponse> pushBatch(
         pending: List<TEntity>,
         id: (TEntity) -> String,
         push: suspend (List<TEntity>) -> List<TResponse>,
         responseId: (TResponse) -> String,
         responseSuccess: (TResponse) -> Boolean,
+        responseConflict: (TResponse) -> Boolean,
+        responseServerSnapshot: (TResponse) -> String?,
         markSynced: suspend (List<String>) -> Unit,
+        markConflict: suspend (List<String>) -> Unit,
+        localSnapshot: (TEntity) -> String,
+        entityType: String,
+        tenantId: String,
     ): Boolean {
         if (pending.isEmpty()) return true
         return try {
             val response = push(pending)
-            val successfulIds = response.filter(responseSuccess).map(responseId).toSet()
+            // Se excluyen explícitamente los ids en conflicto de successfulIds — si una respuesta
+            // alguna vez trajera success=true Y conflict=true simultáneos, el conflicto manda.
+            val conflicted = response.filter(responseConflict)
+            val conflictedIds = conflicted.map(responseId).toSet()
+            val successfulIds = response.filter { responseSuccess(it) && !responseConflict(it) }.map(responseId).toSet()
             if (successfulIds.isNotEmpty()) markSynced(successfulIds.toList())
+
+            if (conflicted.isNotEmpty()) {
+                markConflict(conflictedIds.toList())
+                val pendingById = pending.associateBy(id)
+                conflicted.forEach { item ->
+                    val recordId = responseId(item)
+                    val localEntity = pendingById[recordId] ?: return@forEach
+                    // Dedup: si ya hay una entrada sin resolver para este registro (ej. se re-envió
+                    // en un ciclo de push posterior y sigue en conflicto), se actualiza esa misma
+                    // entrada en vez de insertar una segunda — evita acumular filas de log
+                    // duplicadas para el mismo conflicto sin resolver.
+                    val existingUnresolved = conflictLogDao.getLatestUnresolvedFor(entityType, recordId)
+                    val snapshot = ConflictLogEntity(
+                        id = existingUnresolved?.id ?: UUID.randomUUID().toString(),
+                        fkTenant = tenantId,
+                        entityType = entityType,
+                        recordId = recordId,
+                        localSnapshotJson = localSnapshot(localEntity),
+                        serverSnapshotJson = responseServerSnapshot(item) ?: "{}",
+                        detectedAt = Instant.now(),
+                    )
+                    if (existingUnresolved != null) conflictLogDao.update(snapshot) else conflictLogDao.insert(snapshot)
+                }
+            }
             true
         } catch (e: CancellationException) {
             throw e
@@ -119,7 +165,7 @@ class SyncManager @Inject constructor(
 
     private suspend fun pushClientes(tenantId: String): Boolean {
         val pending = try {
-            clientDao.getPending(tenantId)
+            clientDao.getPending(tenantId) + clientDao.getConflicted(tenantId)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -131,13 +177,19 @@ class SyncManager @Inject constructor(
             push = { syncApiService.pushClientes(it.map { entity -> entity.toSyncDto() }) },
             responseId = { it.id },
             responseSuccess = { it.success },
+            responseConflict = { it.conflict },
+            responseServerSnapshot = { it.serverSnapshot },
             markSynced = { clientDao.markSynced(it) },
+            markConflict = { clientDao.markConflict(it) },
+            localSnapshot = { Json.encodeToString(it.toSyncDto()) },
+            entityType = "clientes",
+            tenantId = tenantId,
         )
     }
 
     private suspend fun pushProductos(tenantId: String): Boolean {
         val pending = try {
-            productDao.getPending(tenantId)
+            productDao.getPending(tenantId) + productDao.getConflicted(tenantId)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -149,13 +201,19 @@ class SyncManager @Inject constructor(
             push = { syncApiService.pushProductos(it.map { entity -> entity.toSyncDto() }) },
             responseId = { it.id },
             responseSuccess = { it.success },
+            responseConflict = { it.conflict },
+            responseServerSnapshot = { it.serverSnapshot },
             markSynced = { productDao.markSynced(it) },
+            markConflict = { productDao.markConflict(it) },
+            localSnapshot = { Json.encodeToString(it.toSyncDto()) },
+            entityType = "productos",
+            tenantId = tenantId,
         )
     }
 
     private suspend fun pushVariantes(tenantId: String): Boolean {
         val pending = try {
-            productVariantDao.getPending(tenantId)
+            productVariantDao.getPending(tenantId) + productVariantDao.getConflicted(tenantId)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -167,13 +225,19 @@ class SyncManager @Inject constructor(
             push = { syncApiService.pushVariantes(it.map { entity -> entity.toSyncDto() }) },
             responseId = { it.id },
             responseSuccess = { it.success },
+            responseConflict = { it.conflict },
+            responseServerSnapshot = { it.serverSnapshot },
             markSynced = { productVariantDao.markSynced(it) },
+            markConflict = { productVariantDao.markConflict(it) },
+            localSnapshot = { Json.encodeToString(it.toSyncDto()) },
+            entityType = "variantes",
+            tenantId = tenantId,
         )
     }
 
     private suspend fun pushVentas(tenantId: String): Boolean {
         val pending = try {
-            saleDao.getPending(tenantId)
+            saleDao.getPending(tenantId) + saleDao.getConflicted(tenantId)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -185,13 +249,19 @@ class SyncManager @Inject constructor(
             push = { syncApiService.pushVentas(it.map { entity -> entity.toSyncDto() }) },
             responseId = { it.id },
             responseSuccess = { it.success },
+            responseConflict = { it.conflict },
+            responseServerSnapshot = { it.serverSnapshot },
             markSynced = { saleDao.markSynced(it) },
+            markConflict = { saleDao.markConflict(it) },
+            localSnapshot = { Json.encodeToString(it.toSyncDto()) },
+            entityType = "ventas",
+            tenantId = tenantId,
         )
     }
 
     private suspend fun pushItemsVenta(tenantId: String): Boolean {
         val pending = try {
-            saleItemDao.getPending(tenantId)
+            saleItemDao.getPending(tenantId) + saleItemDao.getConflicted(tenantId)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -203,13 +273,19 @@ class SyncManager @Inject constructor(
             push = { syncApiService.pushItemsVenta(it.map { entity -> entity.toSyncDto() }) },
             responseId = { it.id },
             responseSuccess = { it.success },
+            responseConflict = { it.conflict },
+            responseServerSnapshot = { it.serverSnapshot },
             markSynced = { saleItemDao.markSynced(it) },
+            markConflict = { saleItemDao.markConflict(it) },
+            localSnapshot = { Json.encodeToString(it.toSyncDto()) },
+            entityType = "items_venta",
+            tenantId = tenantId,
         )
     }
 
     private suspend fun pushParcialidades(tenantId: String): Boolean {
         val pending = try {
-            installmentDao.getPending(tenantId)
+            installmentDao.getPending(tenantId) + installmentDao.getConflicted(tenantId)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -221,13 +297,19 @@ class SyncManager @Inject constructor(
             push = { syncApiService.pushParcialidades(it.map { entity -> entity.toSyncDto() }) },
             responseId = { it.id },
             responseSuccess = { it.success },
+            responseConflict = { it.conflict },
+            responseServerSnapshot = { it.serverSnapshot },
             markSynced = { installmentDao.markSynced(it) },
+            markConflict = { installmentDao.markConflict(it) },
+            localSnapshot = { Json.encodeToString(it.toSyncDto()) },
+            entityType = "parcialidades",
+            tenantId = tenantId,
         )
     }
 
     private suspend fun pushCobros(tenantId: String): Boolean {
         val pending = try {
-            paymentDao.getPending(tenantId)
+            paymentDao.getPending(tenantId) + paymentDao.getConflicted(tenantId)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -239,13 +321,19 @@ class SyncManager @Inject constructor(
             push = { syncApiService.pushCobros(it.map { entity -> entity.toSyncDto() }) },
             responseId = { it.id },
             responseSuccess = { it.success },
+            responseConflict = { it.conflict },
+            responseServerSnapshot = { it.serverSnapshot },
             markSynced = { paymentDao.markSynced(it) },
+            markConflict = { paymentDao.markConflict(it) },
+            localSnapshot = { Json.encodeToString(it.toSyncDto()) },
+            entityType = "cobros",
+            tenantId = tenantId,
         )
     }
 
     private suspend fun pushCreditosAFavor(tenantId: String): Boolean {
         val pending = try {
-            creditBalanceDao.getPending(tenantId)
+            creditBalanceDao.getPending(tenantId) + creditBalanceDao.getConflicted(tenantId)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -257,13 +345,19 @@ class SyncManager @Inject constructor(
             push = { syncApiService.pushCreditosAFavor(it.map { entity -> entity.toSyncDto() }) },
             responseId = { it.id },
             responseSuccess = { it.success },
+            responseConflict = { it.conflict },
+            responseServerSnapshot = { it.serverSnapshot },
             markSynced = { creditBalanceDao.markSynced(it) },
+            markConflict = { creditBalanceDao.markConflict(it) },
+            localSnapshot = { Json.encodeToString(it.toSyncDto()) },
+            entityType = "creditos_a_favor",
+            tenantId = tenantId,
         )
     }
 
-    private suspend fun pushSettings(): Boolean {
+    private suspend fun pushSettings(tenantId: String): Boolean {
         val pending = try {
-            settingsDao.getPending()
+            settingsDao.getPending() + settingsDao.getConflicted()
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -275,7 +369,13 @@ class SyncManager @Inject constructor(
             push = { syncApiService.pushSettings(it.map { entity -> entity.toSyncDto() }) },
             responseId = { it.key },
             responseSuccess = { it.success },
+            responseConflict = { it.conflict },
+            responseServerSnapshot = { it.serverSnapshot },
             markSynced = { settingsDao.markSynced(it) },
+            markConflict = { settingsDao.markConflict(it) },
+            localSnapshot = { Json.encodeToString(it.toSyncDto()) },
+            entityType = "settings",
+            tenantId = tenantId,
         )
     }
 

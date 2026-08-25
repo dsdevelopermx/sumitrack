@@ -7,6 +7,7 @@ import com.sumitrack.android.data.local.RoomTransactionRunner
 import com.sumitrack.android.data.local.SumitrackDatabase
 import com.sumitrack.android.data.local.TransactionRunner
 import com.sumitrack.android.data.local.dao.ClientDao
+import com.sumitrack.android.data.local.dao.ConflictLogDao
 import com.sumitrack.android.data.local.dao.CreditBalanceDao
 import com.sumitrack.android.data.local.dao.InstallmentDao
 import com.sumitrack.android.data.local.dao.PaymentDao
@@ -77,4 +78,8 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideSyncMetadataDao(db: SumitrackDatabase): SyncMetadataDao = db.syncMetadataDao()
+
+    @Provides
+    @Singleton
+    fun provideConflictLogDao(db: SumitrackDatabase): ConflictLogDao = db.conflictLogDao()
 }

@@ -45,6 +45,7 @@ fun ClientListScreen(
     modifier: Modifier = Modifier,
     onAddClientClick: () -> Unit = {},
     onClientClick: (String) -> Unit = {},
+    onConflictClick: (String) -> Unit = {},
     viewModel: ClientListViewModel = hiltViewModel(),
 ) {
     val clients by viewModel.clients.collectAsStateWithLifecycle()
@@ -145,6 +146,7 @@ fun ClientListScreen(
                             ClientCard(
                                 client = client,
                                 onClick = { onClientClick(client.id) },
+                                onConflictClick = { onConflictClick(client.id) },
                                 modifier = Modifier.padding(horizontal = 16.dp),
                             )
                         }

@@ -118,6 +118,251 @@ public class SyncServiceTests
     }
 
     [Fact]
+    public async Task PushAsync_ClienteConVersionServidorMasNueva_DetectaConflictoYNoSobrescribe()
+    {
+        using var ctx = BuildCtx(nameof(PushAsync_ClienteConVersionServidorMasNueva_DetectaConflictoYNoSobrescribe));
+        var tenantId = Guid.NewGuid();
+        var id = Guid.NewGuid();
+        var serverUpdatedAt = DateTime.UtcNow;
+        ctx.Clients.Add(new Models.Entities.Client
+        {
+            Id = id,
+            FkTenant = tenantId,
+            Name = "Versión del servidor",
+            Phone = "5500000000",
+            CreatedAt = serverUpdatedAt.AddDays(-1),
+            UpdatedAt = serverUpdatedAt,
+            SyncStatus = "synced",
+        });
+        await ctx.SaveChangesAsync();
+
+        var service = new SyncService(ctx, BuildTenantContext(tenantId));
+        var clientUpdatedAt = serverUpdatedAt.AddHours(-1); // más viejo que el servidor
+        var payload = ToPayload(new[]
+        {
+            new
+            {
+                id,
+                fkTenant = tenantId,
+                name = "Versión local (obsoleta)",
+                phone = "5511111111",
+                rfc = (string?)null,
+                address = (string?)null,
+                notes = (string?)null,
+                createdAt = clientUpdatedAt,
+                updatedAt = clientUpdatedAt,
+            }
+        });
+
+        var result = await service.PushAsync("clientes", payload, CancellationToken.None);
+
+        var items = Assert.IsType<List<PushSyncResponseItem>>(result);
+        Assert.Single(items);
+        Assert.False(items[0].Success);
+        Assert.True(items[0].Conflict);
+        Assert.NotNull(items[0].ServerSnapshot);
+        Assert.Contains("5500000000", items[0].ServerSnapshot); // el phone del servidor, sin acentos (evita escapes unicode en el JSON)
+
+        var stored = await ctx.Clients.SingleAsync();
+        Assert.Equal("Versión del servidor", stored.Name); // NO se sobrescribió
+        Assert.Equal("5500000000", stored.Phone); // ningún otro campo se tocó tampoco
+        Assert.Null(stored.Rfc);
+        Assert.Null(stored.Address);
+        Assert.Null(stored.Notes);
+        Assert.Equal("synced", stored.SyncStatus); // NO cambia a conflict del lado servidor
+    }
+
+    [Fact]
+    public async Task PushAsync_VentaConVersionServidorMasNueva_DetectaConflicto()
+    {
+        using var ctx = BuildCtx(nameof(PushAsync_VentaConVersionServidorMasNueva_DetectaConflicto));
+        var tenantId = Guid.NewGuid();
+        var clientId = Guid.NewGuid();
+        var id = Guid.NewGuid();
+        var serverUpdatedAt = DateTime.UtcNow;
+        ctx.Sales.Add(new Models.Entities.Sale
+        {
+            Id = id,
+            FkTenant = tenantId,
+            FkClient = clientId,
+            Folio = "A1",
+            Total = 100m,
+            Subtotal = 86.21m,
+            Tax = 13.79m,
+            Status = "paid",
+            CreatedAt = serverUpdatedAt.AddDays(-1),
+            UpdatedAt = serverUpdatedAt,
+            SyncStatus = "synced",
+        });
+        await ctx.SaveChangesAsync();
+
+        var service = new SyncService(ctx, BuildTenantContext(tenantId));
+        var clientUpdatedAt = serverUpdatedAt.AddHours(-1);
+        var payload = ToPayload(new[]
+        {
+            new
+            {
+                id,
+                fkTenant = tenantId,
+                fkClient = clientId,
+                folio = "A1",
+                total = 100m,
+                subtotal = 86.21m,
+                tax = 13.79m,
+                status = "pending", // intenta revertir un estado ya avanzado en el servidor
+                createdAt = clientUpdatedAt,
+                updatedAt = clientUpdatedAt,
+            }
+        });
+
+        var result = await service.PushAsync("ventas", payload, CancellationToken.None);
+
+        var items = Assert.IsType<List<PushSyncResponseItem>>(result);
+        Assert.Single(items);
+        Assert.False(items[0].Success);
+        Assert.True(items[0].Conflict);
+        Assert.NotNull(items[0].ServerSnapshot);
+        Assert.Contains("paid", items[0].ServerSnapshot); // confirma que es el JSON del row existente, no un objeto vacío
+
+        var stored = await ctx.Sales.SingleAsync();
+        Assert.Equal("paid", stored.Status); // NO se sobrescribió con "pending"
+    }
+
+    [Fact]
+    public async Task PushAsync_SettingConVersionServidorMasNueva_DetectaConflicto()
+    {
+        using var ctx = BuildCtx(nameof(PushAsync_SettingConVersionServidorMasNueva_DetectaConflicto));
+        var serverUpdatedAt = DateTime.UtcNow;
+        ctx.Settings.Add(new Models.Entities.Setting
+        {
+            Key = "ticket_footer",
+            Value = "Versión del servidor",
+            CreatedAt = serverUpdatedAt.AddDays(-1),
+            UpdatedAt = serverUpdatedAt,
+            SyncStatus = "synced",
+        });
+        await ctx.SaveChangesAsync();
+
+        var service = new SyncService(ctx, BuildTenantContext(Guid.NewGuid()));
+        var clientUpdatedAt = serverUpdatedAt.AddHours(-1);
+        var payload = ToPayload(new[] { new { key = "ticket_footer", value = "Versión local obsoleta", createdAt = clientUpdatedAt, updatedAt = clientUpdatedAt } });
+
+        var result = await service.PushAsync("settings", payload, CancellationToken.None);
+
+        var items = Assert.IsType<List<SettingSyncResponseItem>>(result);
+        Assert.Single(items);
+        Assert.False(items[0].Success);
+        Assert.True(items[0].Conflict);
+        Assert.NotNull(items[0].ServerSnapshot);
+        Assert.Contains("ticket_footer", items[0].ServerSnapshot); // confirma que es el JSON del row existente
+
+        var stored = await ctx.Settings.SingleAsync();
+        Assert.Equal("Versión del servidor", stored.Value); // NO se sobrescribió
+    }
+
+    [Fact]
+    public async Task PushAsync_ClienteInvalidoConTimestampViejo_ReportaErrorDeValidacionNoConflicto()
+    {
+        // Regresión: confirma que la validación corre ANTES del chequeo de conflicto — un
+        // reordenamiento accidental que revisara el conflicto primero no se detectaría con los
+        // demás tests, que solo usan payloads válidos.
+        using var ctx = BuildCtx(nameof(PushAsync_ClienteInvalidoConTimestampViejo_ReportaErrorDeValidacionNoConflicto));
+        var tenantId = Guid.NewGuid();
+        var id = Guid.NewGuid();
+        var serverUpdatedAt = DateTime.UtcNow;
+        ctx.Clients.Add(new Models.Entities.Client
+        {
+            Id = id,
+            FkTenant = tenantId,
+            Name = "Versión del servidor",
+            Phone = "5500000000",
+            CreatedAt = serverUpdatedAt.AddDays(-1),
+            UpdatedAt = serverUpdatedAt,
+            SyncStatus = "synced",
+        });
+        await ctx.SaveChangesAsync();
+
+        var service = new SyncService(ctx, BuildTenantContext(tenantId));
+        var clientUpdatedAt = serverUpdatedAt.AddHours(-1); // más viejo que el servidor, Y ADEMÁS inválido (phone vacío)
+        var payload = ToPayload(new[]
+        {
+            new
+            {
+                id,
+                fkTenant = tenantId,
+                name = "Nombre",
+                phone = "", // inválido
+                rfc = (string?)null,
+                address = (string?)null,
+                notes = (string?)null,
+                createdAt = clientUpdatedAt,
+                updatedAt = clientUpdatedAt,
+            }
+        });
+
+        var result = await service.PushAsync("clientes", payload, CancellationToken.None);
+
+        var items = Assert.IsType<List<PushSyncResponseItem>>(result);
+        Assert.Single(items);
+        Assert.False(items[0].Success);
+        Assert.False(items[0].Conflict); // es un rechazo de validación, NO un conflicto
+        Assert.NotNull(items[0].Error);
+        Assert.Null(items[0].ServerSnapshot);
+    }
+
+    [Fact]
+    public async Task PushAsync_LoteMixtoConConflictoExitoYRechazo_ProcesaLosTresIndependientemente()
+    {
+        using var ctx = BuildCtx(nameof(PushAsync_LoteMixtoConConflictoExitoYRechazo_ProcesaLosTresIndependientemente));
+        var tenantId = Guid.NewGuid();
+        var serverUpdatedAt = DateTime.UtcNow;
+        var conflictId = Guid.NewGuid();
+        ctx.Clients.Add(new Models.Entities.Client
+        {
+            Id = conflictId,
+            FkTenant = tenantId,
+            Name = "Versión del servidor",
+            Phone = "5500000000",
+            CreatedAt = serverUpdatedAt.AddDays(-1),
+            UpdatedAt = serverUpdatedAt,
+            SyncStatus = "synced",
+        });
+        await ctx.SaveChangesAsync();
+
+        var service = new SyncService(ctx, BuildTenantContext(tenantId));
+        var oldTimestamp = serverUpdatedAt.AddHours(-1);
+        var now = DateTime.UtcNow;
+        var successId = Guid.NewGuid();
+
+        var payload = ToPayload(new[]
+        {
+            new { id = conflictId, fkTenant = tenantId, name = "Obsoleto", phone = "5511111111", rfc = (string?)null, address = (string?)null, notes = (string?)null, createdAt = oldTimestamp, updatedAt = oldTimestamp },
+            new { id = successId, fkTenant = tenantId, name = "Cliente nuevo", phone = "5522222222", rfc = (string?)null, address = (string?)null, notes = (string?)null, createdAt = now, updatedAt = now },
+            new { id = Guid.Empty, fkTenant = tenantId, name = "Inválido", phone = "5533333333", rfc = (string?)null, address = (string?)null, notes = (string?)null, createdAt = now, updatedAt = now },
+        });
+
+        var result = await service.PushAsync("clientes", payload, CancellationToken.None);
+
+        var items = Assert.IsType<List<PushSyncResponseItem>>(result);
+        Assert.Equal(3, items.Count);
+
+        var conflictItem = items.Single(i => i.Id == conflictId);
+        Assert.False(conflictItem.Success);
+        Assert.True(conflictItem.Conflict);
+
+        var successItem = items.Single(i => i.Id == successId);
+        Assert.True(successItem.Success);
+        Assert.False(successItem.Conflict);
+
+        var rejectedItem = items.Single(i => i.Id == Guid.Empty);
+        Assert.False(rejectedItem.Success);
+        Assert.False(rejectedItem.Conflict);
+        Assert.NotNull(rejectedItem.Error);
+
+        Assert.Equal(2, await ctx.Clients.CountAsync()); // el conflictivo (preexistente) + el nuevo exitoso; el inválido nunca se persiste
+    }
+
+    [Fact]
     public async Task PushAsync_UnknownEntity_ReturnsNull()
     {
         using var ctx = BuildCtx(nameof(PushAsync_UnknownEntity_ReturnsNull));

@@ -14,6 +14,9 @@ interface ProductVariantDao {
     @Query("SELECT DISTINCT fk_product FROM product_variants WHERE fk_tenant = :tenantId")
     suspend fun getProductIdsWithVariants(tenantId: String): List<String>
 
+    @Query("SELECT * FROM product_variants WHERE id = :id")
+    suspend fun getById(id: String): ProductVariantEntity?
+
     @Upsert
     suspend fun upsertAll(variants: List<ProductVariantEntity>)
 
@@ -23,6 +26,12 @@ interface ProductVariantDao {
     @Query("SELECT * FROM product_variants WHERE fk_tenant = :tenantId AND sync_status = 'pending'")
     suspend fun getPending(tenantId: String): List<ProductVariantEntity>
 
+    @Query("SELECT * FROM product_variants WHERE fk_tenant = :tenantId AND sync_status = 'conflict'")
+    suspend fun getConflicted(tenantId: String): List<ProductVariantEntity>
+
     @Query("UPDATE product_variants SET sync_status = 'synced' WHERE id IN (:ids)")
     suspend fun markSynced(ids: List<String>)
+
+    @Query("UPDATE product_variants SET sync_status = 'conflict' WHERE id IN (:ids)")
+    suspend fun markConflict(ids: List<String>)
 }

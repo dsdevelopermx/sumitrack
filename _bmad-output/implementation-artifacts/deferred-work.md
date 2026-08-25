@@ -1,4 +1,18 @@
 
+## Deferred from: code review de 4-4-deteccion-y-resolucion-de-conflictos (2026-08-23)
+
+- **Chequeo-de-conflicto-luego-escritura no es atómico con `SaveChangesAsync` en el backend** — dos requests concurrentes para el mismo id podrían ambos pasar el chequeo de timestamp antes de que cualquiera escriba. Misma clase de riesgo ya aceptada/diferida para v1 (retro de Epic 3, single-device-per-tenant). [SyncService.cs]
+- **Timestamps exactamente iguales no se tratan como conflicto** (comparación `>` estricta) — last-write-wins silencioso en el empate exacto. Coincide con la redacción literal del AC. [SyncService.cs]
+- **El resultado de conflicto tiene `Success=false` sin `Error`** — sin impacto práctico hoy porque el único consumidor real (Android) discrimina por el flag `Conflict`, no por `Error`. [PushSyncResponseItem.cs]
+- **`ServerSnapshot` serializa la entidad EF cruda**, incluyendo campos internos (`SyncStatus`, `FkTenant`) sin utilidad para la UI — un DTO más estricto sería más limpio. [SyncService.cs]
+- **`ServerSnapshot` amplifica el radio de impacto si el aislamiento por schema-por-tenant alguna vez se rompiera** — pasaría de un overwrite silencioso a una fuga activa de datos de otro tenant en el response HTTP. Aislamiento verificado correcto hoy, pero sin test a nivel unitario (EF InMemory no tiene concepto de schema). [SyncService.cs]
+- **IDs duplicados dentro del mismo batch de push** hacen que el chequeo de conflicto del segundo item compare contra el primer item del mismo payload aún no guardado, no contra el servidor real — confirmado inalcanzable desde el cliente Android actual, pero alcanzable por cualquier otro caller de la API. [SyncService.cs]
+- **Editar un registro en `sync_status='conflict'` por una vía normal (fuera de S-15) lo revierte a `pending` sin resolver el `ConflictLogEntity` correspondiente** — el log queda huérfano para siempre. Arreglarlo requiere inyectar `ConflictLogDao` en cada repositorio (`ClientRepository`, `ProductRepository`, `SaleRepository`, etc.). Ventana angosta (requiere editar un registro ya en conflicto sin pasar por S-15 primero). [ClientRepository.kt y análogos]
+- **"Conservar ambas" en `ventas` crea una venta duplicada sin sus `SaleItem`/`Installment`/`Payment` asociados** — un pedido incompleto/huérfano. Requiere cascada de duplicación entre tablas relacionadas; "revisión posterior" en AC-5 ya implica reconciliación manual esperada. [ConflictViewModel.kt]
+- **7 de 9 llamadas `getById`/`getByKey` en `ConflictViewModel.applyResolution` no filtran por tenant** (a diferencia de `productos`/`ventas`) — confirmado teórico únicamente (todos los ids son UUIDs), pero inconsistencia latente de defensa-en-profundidad. [ConflictViewModel.kt]
+- **"Conservar ambas" no deja ningún marcador visible en las listas** (`OrderCard`/`ClientCard`) — solo el campo `duplicateRecordId` (audit-only) en el log registra la relación. Requiere llevar ids de duplicados a los ViewModels de lista. [OrderCard.kt, ClientCard.kt]
+- **`dismissButton` del `AlertDialog` de S-15 se usa para "Conservar ambas"**, una acción real, no semánticamente un "cancelar" — mal uso cosmético del slot de Material3, sin impacto funcional. [ConflictScreen.kt]
+
 ## Deferred from: code review de 4-3-indicadores-de-sincronizacion-en-la-ui (2026-08-22)
 
 - **Race entre `registerNetworkCallback` y la lectura de `activeNetwork` en `ConnectivityObserver`** — si la red cambia justo en ese intervalo, el callback puede emitir `trySend` y luego la lectura de "estado actual" (potencialmente obsoleta) lo sobrescribe. Ventana angosta y autocorregible: el próximo callback de red la corrige. [ConnectivityObserver.kt]

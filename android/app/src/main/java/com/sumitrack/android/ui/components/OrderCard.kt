@@ -16,7 +16,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.sumitrack.android.domain.models.OrderSummary
 import com.sumitrack.android.domain.models.SaleStatus
-import com.sumitrack.android.domain.models.SyncStatus
 import com.sumitrack.android.ui.theme.PrimaryVariant
 import java.math.BigDecimal
 import java.math.RoundingMode
@@ -29,6 +28,7 @@ import java.util.Locale
 fun OrderCard(
     order: OrderSummary,
     onClick: () -> Unit,
+    onConflictClick: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     ElevatedCard(
@@ -72,7 +72,7 @@ fun OrderCard(
                     modifier = Modifier.weight(1f),
                 )
                 StatusBadge(order.status.toUiStatus())
-                SyncIcon(isSynced = order.syncStatus == SyncStatus.SYNCED)
+                SyncIcon(status = order.syncStatus, onConflictClick = onConflictClick)
             }
         }
     }

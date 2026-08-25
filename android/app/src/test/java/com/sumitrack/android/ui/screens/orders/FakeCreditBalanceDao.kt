@@ -17,7 +17,16 @@ class FakeCreditBalanceDao : CreditBalanceDao {
     override suspend fun getPending(tenantId: String): List<CreditBalanceEntity> =
         rows.values.filter { it.fkTenant == tenantId && it.syncStatus == "pending" }
 
+    override suspend fun getConflicted(tenantId: String): List<CreditBalanceEntity> =
+        rows.values.filter { it.fkTenant == tenantId && it.syncStatus == "conflict" }
+
     override suspend fun markSynced(ids: List<String>) {
         ids.forEach { id -> rows[id]?.let { rows[id] = it.copy(syncStatus = "synced") } }
     }
+
+    override suspend fun markConflict(ids: List<String>) {
+        ids.forEach { id -> rows[id]?.let { rows[id] = it.copy(syncStatus = "conflict") } }
+    }
+
+    override suspend fun getById(id: String): CreditBalanceEntity? = rows[id]
 }

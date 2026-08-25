@@ -5,4 +5,6 @@ public class SettingSyncResponseItem
     public string Key { get; set; } = string.Empty;
     public bool Success { get; set; }
     public string? Error { get; set; }
+    public bool Conflict { get; set; }
+    public string? ServerSnapshot { get; set; }
 }

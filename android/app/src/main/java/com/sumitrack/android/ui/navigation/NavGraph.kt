@@ -13,6 +13,8 @@ import androidx.navigation.navArgument
 import com.sumitrack.android.ui.screens.clients.ClientFormScreen
 import com.sumitrack.android.ui.screens.clients.ClientListScreen
 import com.sumitrack.android.ui.screens.clients.ClientProfileScreen
+import com.sumitrack.android.ui.screens.conflict.ConflictLogScreen
+import com.sumitrack.android.ui.screens.conflict.ConflictScreen
 import com.sumitrack.android.ui.screens.orders.ClientSelectScreen
 import com.sumitrack.android.ui.screens.orders.ItemListScreen
 import com.sumitrack.android.ui.screens.orders.OrderDetailScreen
@@ -44,6 +46,9 @@ fun NavGraph(navController: NavHostController, modifier: Modifier = Modifier) {
                 onOrderClick = { saleId ->
                     navController.navigate(Routes.OrderDetail.createRoute(saleId)) { launchSingleTop = true }
                 },
+                onConflictClick = { saleId ->
+                    navController.navigate(Routes.Conflict.createRoute("ventas", saleId)) { launchSingleTop = true }
+                },
                 focusFabOnEntry = focusFab,
                 onFabFocusConsumed = { backStackEntry.savedStateHandle["focusFab"] = false },
             )
@@ -56,12 +61,26 @@ fun NavGraph(navController: NavHostController, modifier: Modifier = Modifier) {
                 onClientClick = { clientId ->
                     navController.navigate(Routes.ClientProfile.createRoute(clientId)) { launchSingleTop = true }
                 },
+                onConflictClick = { clientId ->
+                    navController.navigate(Routes.Conflict.createRoute("clientes", clientId)) { launchSingleTop = true }
+                },
             )
         }
         composable(Routes.Settings.route) {
             SettingsScreen(
                 onCatalogClick = {
                     navController.navigate(Routes.ProductList.route) { launchSingleTop = true }
+                },
+                onSyncLogClick = {
+                    navController.navigate(Routes.ConflictLog.route) { launchSingleTop = true }
+                },
+            )
+        }
+        composable(Routes.ConflictLog.route) {
+            ConflictLogScreen(
+                onBackClick = { navController.popBackStack() },
+                onConflictClick = { entityType, recordId ->
+                    navController.navigate(Routes.Conflict.createRoute(entityType, recordId)) { launchSingleTop = true }
                 },
             )
         }
@@ -185,6 +204,17 @@ fun NavGraph(navController: NavHostController, modifier: Modifier = Modifier) {
         ) {
             OrderDetailScreen(
                 onBackClick = { navController.popBackStack() },
+            )
+        }
+        composable(
+            route = Routes.Conflict.route,
+            arguments = listOf(
+                navArgument("entityType") { type = NavType.StringType },
+                navArgument("recordId") { type = NavType.StringType },
+            ),
+        ) {
+            ConflictScreen(
+                onDismiss = { navController.popBackStack() },
             )
         }
     }

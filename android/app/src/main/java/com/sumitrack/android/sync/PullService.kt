@@ -106,7 +106,7 @@ class PullService @Inject constructor(
         val requestedAt = Instant.now()
         return try {
             val remote = syncApiService.pullClientes(since?.toString())
-            val pendingIds = clientDao.getPending(tenantId).map { it.id }.toSet()
+            val pendingIds = (clientDao.getPending(tenantId) + clientDao.getConflicted(tenantId)).map { it.id }.toSet()
             val toUpsert = remote.filterNot { it.id in pendingIds }.map { it.toEntity() }
             if (toUpsert.isNotEmpty()) clientDao.upsertAll(toUpsert)
             if (toUpsert.size == remote.size) syncMetadataDao.setLastSyncAt(SyncMetadataEntity("clientes", requestedAt))
@@ -123,7 +123,7 @@ class PullService @Inject constructor(
         val requestedAt = Instant.now()
         return try {
             val remote = syncApiService.pullProductos(since?.toString())
-            val pendingIds = productDao.getPending(tenantId).map { it.id }.toSet()
+            val pendingIds = (productDao.getPending(tenantId) + productDao.getConflicted(tenantId)).map { it.id }.toSet()
             val toUpsert = remote.filterNot { it.id in pendingIds }.map { it.toEntity() }
             if (toUpsert.isNotEmpty()) productDao.upsertAll(toUpsert)
             if (toUpsert.size == remote.size) syncMetadataDao.setLastSyncAt(SyncMetadataEntity("productos", requestedAt))
@@ -140,7 +140,7 @@ class PullService @Inject constructor(
         val requestedAt = Instant.now()
         return try {
             val remote = syncApiService.pullVariantes(since?.toString())
-            val pendingIds = productVariantDao.getPending(tenantId).map { it.id }.toSet()
+            val pendingIds = (productVariantDao.getPending(tenantId) + productVariantDao.getConflicted(tenantId)).map { it.id }.toSet()
             val toUpsert = remote.filterNot { it.id in pendingIds }.map { it.toEntity() }
             if (toUpsert.isNotEmpty()) productVariantDao.upsertAll(toUpsert)
             if (toUpsert.size == remote.size) syncMetadataDao.setLastSyncAt(SyncMetadataEntity("variantes", requestedAt))
@@ -157,7 +157,7 @@ class PullService @Inject constructor(
         val requestedAt = Instant.now()
         return try {
             val remote = syncApiService.pullVentas(since?.toString())
-            val pendingIds = saleDao.getPending(tenantId).map { it.id }.toSet()
+            val pendingIds = (saleDao.getPending(tenantId) + saleDao.getConflicted(tenantId)).map { it.id }.toSet()
             val toUpsert = remote.filterNot { it.id in pendingIds }.map { it.toEntity() }
             if (toUpsert.isNotEmpty()) saleDao.upsertAll(toUpsert)
             if (toUpsert.size == remote.size) syncMetadataDao.setLastSyncAt(SyncMetadataEntity("ventas", requestedAt))
@@ -174,7 +174,7 @@ class PullService @Inject constructor(
         val requestedAt = Instant.now()
         return try {
             val remote = syncApiService.pullItemsVenta(since?.toString())
-            val pendingIds = saleItemDao.getPending(tenantId).map { it.id }.toSet()
+            val pendingIds = (saleItemDao.getPending(tenantId) + saleItemDao.getConflicted(tenantId)).map { it.id }.toSet()
             val toUpsert = remote.filterNot { it.id in pendingIds }.map { it.toEntity() }
             if (toUpsert.isNotEmpty()) saleItemDao.upsertAll(toUpsert)
             if (toUpsert.size == remote.size) syncMetadataDao.setLastSyncAt(SyncMetadataEntity("items_venta", requestedAt))
@@ -191,7 +191,7 @@ class PullService @Inject constructor(
         val requestedAt = Instant.now()
         return try {
             val remote = syncApiService.pullParcialidades(since?.toString())
-            val pendingIds = installmentDao.getPending(tenantId).map { it.id }.toSet()
+            val pendingIds = (installmentDao.getPending(tenantId) + installmentDao.getConflicted(tenantId)).map { it.id }.toSet()
             val toUpsert = remote.filterNot { it.id in pendingIds }.map { it.toEntity() }
             if (toUpsert.isNotEmpty()) installmentDao.upsertAll(toUpsert)
             if (toUpsert.size == remote.size) syncMetadataDao.setLastSyncAt(SyncMetadataEntity("parcialidades", requestedAt))
@@ -208,7 +208,7 @@ class PullService @Inject constructor(
         val requestedAt = Instant.now()
         return try {
             val remote = syncApiService.pullCobros(since?.toString())
-            val pendingIds = paymentDao.getPending(tenantId).map { it.id }.toSet()
+            val pendingIds = (paymentDao.getPending(tenantId) + paymentDao.getConflicted(tenantId)).map { it.id }.toSet()
             val toUpsert = remote.filterNot { it.id in pendingIds }.map { it.toEntity() }
             if (toUpsert.isNotEmpty()) paymentDao.upsertAll(toUpsert)
             if (toUpsert.size == remote.size) syncMetadataDao.setLastSyncAt(SyncMetadataEntity("cobros", requestedAt))
@@ -225,7 +225,7 @@ class PullService @Inject constructor(
         val requestedAt = Instant.now()
         return try {
             val remote = syncApiService.pullCreditosAFavor(since?.toString())
-            val pendingIds = creditBalanceDao.getPending(tenantId).map { it.id }.toSet()
+            val pendingIds = (creditBalanceDao.getPending(tenantId) + creditBalanceDao.getConflicted(tenantId)).map { it.id }.toSet()
             val toUpsert = remote.filterNot { it.id in pendingIds }.map { it.toEntity() }
             if (toUpsert.isNotEmpty()) creditBalanceDao.upsertAll(toUpsert)
             if (toUpsert.size == remote.size) syncMetadataDao.setLastSyncAt(SyncMetadataEntity("creditos_a_favor", requestedAt))
@@ -242,7 +242,7 @@ class PullService @Inject constructor(
         val requestedAt = Instant.now()
         return try {
             val remote = syncApiService.pullSettings(since?.toString())
-            val pendingKeys = settingsDao.getPending().map { it.key }.toSet()
+            val pendingKeys = (settingsDao.getPending() + settingsDao.getConflicted()).map { it.key }.toSet()
             val toUpsert = remote.filterNot { it.key in pendingKeys }.map { it.toEntity() }
             if (toUpsert.isNotEmpty()) settingsDao.upsertAll(toUpsert)
             if (toUpsert.size == remote.size) syncMetadataDao.setLastSyncAt(SyncMetadataEntity("settings", requestedAt))

@@ -17,7 +17,16 @@ class FakePaymentDao : PaymentDao {
     override suspend fun getPending(tenantId: String): List<PaymentEntity> =
         payments.values.filter { it.fkTenant == tenantId && it.syncStatus == "pending" }
 
+    override suspend fun getConflicted(tenantId: String): List<PaymentEntity> =
+        payments.values.filter { it.fkTenant == tenantId && it.syncStatus == "conflict" }
+
     override suspend fun markSynced(ids: List<String>) {
         ids.forEach { id -> payments[id]?.let { payments[id] = it.copy(syncStatus = "synced") } }
     }
+
+    override suspend fun markConflict(ids: List<String>) {
+        ids.forEach { id -> payments[id]?.let { payments[id] = it.copy(syncStatus = "conflict") } }
+    }
+
+    override suspend fun getById(id: String): PaymentEntity? = payments[id]
 }

@@ -177,6 +177,9 @@ class FakeClientDao : ClientDao {
     override suspend fun getPending(tenantId: String): List<ClientEntity> =
         allFlow.value.filter { it.fkTenant == tenantId && it.syncStatus == "pending" }
 
+    override suspend fun getConflicted(tenantId: String): List<ClientEntity> =
+        allFlow.value.filter { it.fkTenant == tenantId && it.syncStatus == "conflict" }
+
     override fun searchByNameAsFlow(normalizedQuery: String): Flow<List<ClientEntity>> =
         allFlow.map { list ->
             list.filter { SearchNormalizer.normalize(it.name).contains(normalizedQuery) }
@@ -207,5 +210,9 @@ class FakeClientDao : ClientDao {
 
     override suspend fun markSynced(ids: List<String>) {
         allFlow.value = allFlow.value.map { if (it.id in ids) it.copy(syncStatus = "synced") else it }
+    }
+
+    override suspend fun markConflict(ids: List<String>) {
+        allFlow.value = allFlow.value.map { if (it.id in ids) it.copy(syncStatus = "conflict") else it }
     }
 }

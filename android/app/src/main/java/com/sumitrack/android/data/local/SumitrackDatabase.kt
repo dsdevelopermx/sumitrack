@@ -6,6 +6,7 @@ import androidx.room.TypeConverters
 import com.sumitrack.android.data.local.converters.BigDecimalConverter
 import com.sumitrack.android.data.local.converters.InstantConverter
 import com.sumitrack.android.data.local.dao.ClientDao
+import com.sumitrack.android.data.local.dao.ConflictLogDao
 import com.sumitrack.android.data.local.dao.CreditBalanceDao
 import com.sumitrack.android.data.local.dao.InstallmentDao
 import com.sumitrack.android.data.local.dao.PaymentDao
@@ -16,6 +17,7 @@ import com.sumitrack.android.data.local.dao.SaleItemDao
 import com.sumitrack.android.data.local.dao.SettingsDao
 import com.sumitrack.android.data.local.dao.SyncMetadataDao
 import com.sumitrack.android.data.local.entities.ClientEntity
+import com.sumitrack.android.data.local.entities.ConflictLogEntity
 import com.sumitrack.android.data.local.entities.CreditBalanceEntity
 import com.sumitrack.android.data.local.entities.InstallmentEntity
 import com.sumitrack.android.data.local.entities.PaymentEntity
@@ -38,8 +40,9 @@ import com.sumitrack.android.data.local.entities.SyncMetadataEntity
         PaymentEntity::class,
         CreditBalanceEntity::class,
         SyncMetadataEntity::class,
+        ConflictLogEntity::class,
     ],
-    version = 8,
+    version = 9,
     exportSchema = true,
 )
 @TypeConverters(BigDecimalConverter::class, InstantConverter::class)
@@ -54,4 +57,5 @@ abstract class SumitrackDatabase : RoomDatabase() {
     abstract fun paymentDao(): PaymentDao
     abstract fun creditBalanceDao(): CreditBalanceDao
     abstract fun syncMetadataDao(): SyncMetadataDao
+    abstract fun conflictLogDao(): ConflictLogDao
 }
