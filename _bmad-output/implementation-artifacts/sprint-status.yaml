@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-06-27
-last_updated: 2026-08-23  # updated: 4-4 → review (implementación completa, T1-T16)
+last_updated: 2026-09-13  # updated: 5-1 → done (code review completo)
 project: sumitrack
 project_key: NOKEY
 tracking_system: file-system
@@ -78,8 +78,8 @@ development_status:
   epic-4-retrospective: optional
 
   # ─── Epic 5: Agenda de Cobros, Notificaciones y Configuración ───
-  epic-5: backlog
-  5-1-pantalla-de-configuracion-del-tenant: backlog
+  epic-5: in-progress
+  5-1-pantalla-de-configuracion-del-tenant: done
   5-2-notificaciones-push-locales-para-recordatorios-de-cobro: backlog
   5-3-agenda-y-calendario-de-cobros: backlog
   epic-5-retrospective: optional

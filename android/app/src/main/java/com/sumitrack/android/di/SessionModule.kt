@@ -1,6 +1,7 @@
 package com.sumitrack.android.di
 
 import com.sumitrack.android.data.repositories.FolioBaselineStore
+import com.sumitrack.android.data.repositories.SessionClearer
 import com.sumitrack.android.data.repositories.SessionManager
 import dagger.Module
 import dagger.Provides
@@ -30,4 +31,9 @@ object SessionModule {
     // para que PullService/ValidateFolioUseCase sean testeables en JVM puro sin un Context real.
     @Provides
     fun provideFolioBaselineStore(sessionManager: SessionManager): FolioBaselineStore = sessionManager
+
+    // Mismo criterio: expone solo la interfaz angosta de clearToken() (no todo SessionManager)
+    // para que SettingsViewModel sea testeable en JVM puro sin un Context real.
+    @Provides
+    fun provideSessionClearer(sessionManager: SessionManager): SessionClearer = sessionManager
 }

@@ -1,4 +1,14 @@
 
+## Deferred from: code review de 5-1-pantalla-de-configuracion-del-tenant (2026-09-13)
+
+- **Cerrar sesión mientras un guardado de settings está en curso puede dejar filas residuales tras `clearLocalSettings()`** — race infrecuente (requiere tocar "Guardar" y confirmar "Cerrar sesión" antes de que la corrutina de guardado termine), misma clase de riesgo ya tolerada en el proyecto (ver conflicto-luego-escritura del backend arriba). [SettingsViewModel.kt]
+- **`SettingsRepository.getAllValues()` es una foto fija (`.first()`), no un `Flow` reactivo** — si un pull concurrente actualiza settings mientras S-14 está abierta, la pantalla no lo refleja hasta reabrirse. Mismo patrón de carga única que `ClientFormViewModel` ya usa en todo el proyecto — no es una regresión introducida por esta historia. [SettingsRepository.kt]
+- **Botón "Sincronizar ahora" sin debounce** — taps repetidos reinician el pull en curso (`ExistingWorkPolicy.REPLACE` en `TriggerPullSyncUseCase`) en vez de ignorarse. [SettingsScreen.kt]
+- **Sin `CircularProgressIndicator` dentro de los botones "Guardar" mientras `isSavingFiscal`/`isSavingParams`** — inconsistente con el patrón ya establecido en `ClientFormScreen` (swap del texto del botón por un spinner durante el guardado). [SettingsScreen.kt]
+- **Los textos de confirmación "Datos fiscales guardados."/"Parámetros de venta guardados." no se autolimpian** — quedan en pantalla indefinidamente hasta la próxima edición de un campo. [SettingsScreen.kt]
+- **`TriggerPullSyncUseCase` no tiene test dedicado** — cobertura indirecta solo a través del fake usado en `SettingsViewModelTest`; la clase real que encola `WorkManager` nunca se ejercita directamente. [TriggerPullSyncUseCase.kt]
+- **Los botones "Guardar" de Datos Fiscales y Parámetros de Venta comparten el mismo texto** — ambigüedad menor de accesibilidad para TalkBack si navega la pantalla completa de una sola pasada. [SettingsScreen.kt]
+
 ## Deferred from: code review de 4-4-deteccion-y-resolucion-de-conflictos (2026-08-23)
 
 - **Chequeo-de-conflicto-luego-escritura no es atómico con `SaveChangesAsync` en el backend** — dos requests concurrentes para el mismo id podrían ambos pasar el chequeo de timestamp antes de que cualquiera escriba. Misma clase de riesgo ya aceptada/diferida para v1 (retro de Epic 3, single-device-per-tenant). [SyncService.cs]

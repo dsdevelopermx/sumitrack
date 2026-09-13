@@ -19,7 +19,7 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 @Singleton
 class SessionManager @Inject constructor(
     @ApplicationContext private val context: Context,
-) : FolioBaselineStore {
+) : FolioBaselineStore, SessionClearer {
 
     private val tokenKey = stringPreferencesKey("auth_token")
     private val tenantIdKey = stringPreferencesKey("tenant_id")
@@ -56,7 +56,7 @@ class SessionManager @Inject constructor(
         }
     }
 
-    suspend fun clearToken() {
+    override suspend fun clearToken() {
         context.dataStore.edit { prefs ->
             prefs.remove(tokenKey)
             prefs.remove(tenantIdKey)

@@ -4,8 +4,10 @@ import android.content.Context
 import androidx.work.WorkManager
 import com.sumitrack.android.sync.AndroidConnectivityObserver
 import com.sumitrack.android.sync.ConnectivityObserver
+import com.sumitrack.android.sync.PullSyncTrigger
 import com.sumitrack.android.sync.PushSyncTrigger
 import com.sumitrack.android.sync.SyncWorkObserver
+import com.sumitrack.android.sync.TriggerPullSyncUseCase
 import com.sumitrack.android.sync.TriggerPushSyncUseCase
 import com.sumitrack.android.sync.WorkManagerSyncWorkObserver
 import dagger.Module
@@ -39,4 +41,8 @@ object SyncModule {
     @Provides
     @Singleton
     fun providePushSyncTrigger(useCase: TriggerPushSyncUseCase): PushSyncTrigger = useCase
+
+    @Provides
+    @Singleton
+    fun providePullSyncTrigger(useCase: TriggerPullSyncUseCase): PullSyncTrigger = useCase
 }

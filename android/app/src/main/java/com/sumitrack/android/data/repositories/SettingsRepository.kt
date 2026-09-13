@@ -3,8 +3,10 @@ package com.sumitrack.android.data.repositories
 import com.sumitrack.android.data.local.dao.SettingsDao
 import com.sumitrack.android.data.local.entities.SettingsEntity
 import com.sumitrack.android.data.remote.api.SettingsApiService
+import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.first
 
 @Singleton
 class SettingsRepository @Inject constructor(
@@ -22,4 +24,23 @@ class SettingsRepository @Inject constructor(
     }
 
     suspend fun getValue(key: String): String? = settingsDao.getValue(key)
+
+    // SettingsEntity no tiene updatedAt propio (ver Dev Notes de Historia 4.4) — createdAt es el
+    // campo reutilizado como timestamp de sincronización en SyncManager.toSyncDto(), así que debe
+    // avanzar en cada edición para que la detección de conflictos de Historia 4.4 siga funcionando
+    // sobre settings editados desde S-14.
+    suspend fun updateSetting(key: String, value: String) {
+        settingsDao.upsertAll(listOf(SettingsEntity(key = key, value = value, createdAt = Instant.now(), syncStatus = "pending")))
+    }
+
+    // Variante en lote de updateSetting: un único upsertAll(lista) — Room ejecuta los @Upsert de
+    // una lista dentro de una sola transacción — así un guardado de varios campos a la vez (p. ej.
+    // los 4 de Datos Fiscales) es atómico: si algo falla, no quedan escrituras parciales.
+    suspend fun updateSettings(values: Map<String, String>) {
+        val now = Instant.now()
+        settingsDao.upsertAll(values.map { (key, value) -> SettingsEntity(key = key, value = value, createdAt = now, syncStatus = "pending") })
+    }
+
+    suspend fun getAllValues(): Map<String, String> =
+        settingsDao.getAll().first().associate { it.key to it.value.orEmpty() }
 }
