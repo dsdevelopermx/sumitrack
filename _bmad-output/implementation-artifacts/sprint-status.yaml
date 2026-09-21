@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-06-27
-last_updated: 2026-09-21  # updated: 5-3 → done (code review completo)
+last_updated: 2026-09-21  # updated: epic-5-retrospective → done
 project: sumitrack
 project_key: NOKEY
 tracking_system: file-system
@@ -82,4 +82,4 @@ development_status:
   5-1-pantalla-de-configuracion-del-tenant: done
   5-2-notificaciones-push-locales-para-recordatorios-de-cobro: done
   5-3-agenda-y-calendario-de-cobros: done
-  epic-5-retrospective: optional
+  epic-5-retrospective: done
