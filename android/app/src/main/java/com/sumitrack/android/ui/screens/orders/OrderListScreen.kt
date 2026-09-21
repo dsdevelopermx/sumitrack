@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.filled.Add
@@ -105,10 +106,13 @@ fun OrderListScreen(
             )
         },
         floatingActionButton = {
+            // DESIGN.md: Extended FAB con ícono "+" y etiqueta "Nueva Orden". shape explícito porque el
+            // shapes.large de este tema es la forma de bottom sheet (ver Shape.kt).
             ExtendedFloatingActionButton(
-                text = { Text("+") },
-                icon = { Icon(Icons.Filled.Add, contentDescription = "Nueva Orden") },
+                text = { Text("Nueva Orden") },
+                icon = { Icon(Icons.Filled.Add, contentDescription = null) },
                 onClick = onNewOrderClick,
+                shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.focusRequester(fabFocusRequester),
             )
         },

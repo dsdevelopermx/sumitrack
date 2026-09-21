@@ -7,6 +7,7 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -131,7 +132,9 @@ fun MainScreen(viewModel: SyncStatusViewModel = hiltViewModel()) {
             }
         }
     ) { innerPadding ->
-        Column(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+        // consumeWindowInsets: el padding de este Scaffold ya cubre las barras del sistema; sin consumirlos,
+        // el TopAppBar/Scaffold anidado de cada pantalla los vuelve a aplicar (franja de más sobre el título).
+        Column(modifier = Modifier.padding(innerPadding).consumeWindowInsets(innerPadding).fillMaxSize()) {
             if (isOffline) {
                 OfflineBanner(modifier = Modifier.fillMaxWidth())
             }

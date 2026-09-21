@@ -9,13 +9,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.People
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -60,11 +61,11 @@ fun ClientListScreen(
         modifier = modifier,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            ExtendedFloatingActionButton(
-                text = { Text("+") },
-                icon = { Icon(Icons.Filled.Add, contentDescription = "Agregar cliente") },
-                onClick = onAddClientClick,
-            )
+            // shape explícito: el ExtendedFAB/FAB de M3 usa shapes.large, que en este tema es la forma de
+            // bottom sheet (solo esquinas superiores redondeadas).
+            FloatingActionButton(onClick = onAddClientClick, shape = RoundedCornerShape(16.dp)) {
+                Icon(Icons.Filled.Add, contentDescription = "Agregar cliente")
+            }
         },
     ) { innerPadding ->
         Column(

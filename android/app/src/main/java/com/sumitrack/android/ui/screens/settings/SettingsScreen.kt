@@ -25,6 +25,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -32,6 +33,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
@@ -49,6 +51,9 @@ fun SettingsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val focusManager = LocalFocusManager.current
+    // El token `outline` del diseño (#E8E8EE) es para bordes de cards y separadores; M3 lo usa también
+    // como borde de campo sin foco y contra el fondo casi no se ve. Aquí se usa on-surface-variant.
+    val fieldColors = OutlinedTextFieldDefaults.colors(unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant)
 
     // Mientras carga los 7 valores iniciales (SettingsViewModel.init), no se renderizan los
     // campos — evita que el tipeo del usuario sea sobrescrito por la carga asíncrona. Mismo patrón
@@ -68,7 +73,7 @@ fun SettingsScreen(
     ) {
         Text(
             text = "Configuración",
-            style = MaterialTheme.typography.headlineSmall,
+            style = MaterialTheme.typography.titleLarge,
         )
         Spacer(modifier = Modifier.height(16.dp))
         HorizontalDivider()
@@ -84,6 +89,7 @@ fun SettingsScreen(
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
             keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
             enabled = !uiState.isSavingFiscal,
+            colors = fieldColors,
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
         )
         OutlinedTextField(
@@ -94,6 +100,7 @@ fun SettingsScreen(
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
             keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
             enabled = !uiState.isSavingFiscal,
+            colors = fieldColors,
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
         )
         OutlinedTextField(
@@ -104,6 +111,7 @@ fun SettingsScreen(
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
             keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
             enabled = !uiState.isSavingFiscal,
+            colors = fieldColors,
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
         )
         OutlinedTextField(
@@ -114,6 +122,7 @@ fun SettingsScreen(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
             enabled = !uiState.isSavingFiscal,
+            colors = fieldColors,
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
         )
         if (uiState.fiscalSaved) {
@@ -147,7 +156,7 @@ fun SettingsScreen(
         HorizontalDivider()
 
         // --- Catálogo de Productos ---
-        Surface(onClick = onCatalogClick) {
+        Surface(onClick = onCatalogClick, color = Color.Transparent) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
@@ -182,6 +191,7 @@ fun SettingsScreen(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
             keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
             enabled = !uiState.isSavingParams,
+            colors = fieldColors,
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
         )
         OutlinedTextField(
@@ -194,6 +204,7 @@ fun SettingsScreen(
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
             keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
             enabled = !uiState.isSavingParams,
+            colors = fieldColors,
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
         )
         OutlinedTextField(
@@ -206,6 +217,7 @@ fun SettingsScreen(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
             enabled = !uiState.isSavingParams,
+            colors = fieldColors,
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
         )
         if (uiState.paramsSaved) {
@@ -237,10 +249,11 @@ fun SettingsScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
         HorizontalDivider()
+        Spacer(modifier = Modifier.height(16.dp))
 
         // --- Sincronización ---
         SectionHeader("Sincronización")
-        Surface(onClick = onSyncLogClick) {
+        Surface(onClick = onSyncLogClick, color = Color.Transparent) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
@@ -253,7 +266,7 @@ fun SettingsScreen(
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    text = "Sincronización",
+                    text = "Historial de conflictos",
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.padding(start = 16.dp),
                 )

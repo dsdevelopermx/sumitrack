@@ -19,7 +19,9 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:5000/\"")
+        // Debug: la API local corre en el puerto 5600 (macOS ocupa el 5000 con AirPlay Receiver). La app
+        // llega por `adb reverse tcp:5600 tcp:5600`, que funciona igual en teléfono físico y emulador.
+        buildConfigField("String", "BASE_URL", "\"http://localhost:5600/\"")
     }
 
     buildTypes {
