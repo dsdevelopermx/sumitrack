@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
@@ -24,6 +25,7 @@ import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -57,6 +59,7 @@ fun OrderListScreen(
     onNewOrderClick: () -> Unit = {},
     onOrderClick: (saleId: String) -> Unit = {},
     onConflictClick: (recordId: String) -> Unit = {},
+    onAgendaClick: () -> Unit = {},
     focusFabOnEntry: Boolean = false,
     onFabFocusConsumed: () -> Unit = {},
     viewModel: OrderListViewModel = hiltViewModel(),
@@ -90,6 +93,17 @@ fun OrderListScreen(
     Scaffold(
         modifier = modifier,
         snackbarHost = { SnackbarHost(snackbarHostState) },
+        // Historia 5.3: S-02 no tenía app bar; el ícono de calendario abre la Agenda de Cobros (S-10).
+        topBar = {
+            TopAppBar(
+                title = { Text("Órdenes") },
+                actions = {
+                    IconButton(onClick = onAgendaClick) {
+                        Icon(Icons.Outlined.CalendarMonth, contentDescription = "Agenda de cobros")
+                    }
+                },
+            )
+        },
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 text = { Text("+") },

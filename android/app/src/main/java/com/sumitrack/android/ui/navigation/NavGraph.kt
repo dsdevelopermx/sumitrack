@@ -10,6 +10,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.sumitrack.android.ui.screens.agenda.AgendaScreen
 import com.sumitrack.android.ui.screens.clients.ClientFormScreen
 import com.sumitrack.android.ui.screens.clients.ClientListScreen
 import com.sumitrack.android.ui.screens.clients.ClientProfileScreen
@@ -49,6 +50,9 @@ fun NavGraph(navController: NavHostController, modifier: Modifier = Modifier) {
                 onConflictClick = { saleId ->
                     navController.navigate(Routes.Conflict.createRoute("ventas", saleId)) { launchSingleTop = true }
                 },
+                onAgendaClick = {
+                    navController.navigate(Routes.Agenda.route) { launchSingleTop = true }
+                },
                 focusFabOnEntry = focusFab,
                 onFabFocusConsumed = { backStackEntry.savedStateHandle["focusFab"] = false },
             )
@@ -73,6 +77,14 @@ fun NavGraph(navController: NavHostController, modifier: Modifier = Modifier) {
                 },
                 onSyncLogClick = {
                     navController.navigate(Routes.ConflictLog.route) { launchSingleTop = true }
+                },
+            )
+        }
+        composable(Routes.Agenda.route) {
+            AgendaScreen(
+                onBackClick = { navController.popBackStack() },
+                onEntryClick = { saleId ->
+                    navController.navigate(Routes.OrderDetail.createRoute(saleId)) { launchSingleTop = true }
                 },
             )
         }

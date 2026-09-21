@@ -3,6 +3,7 @@ package com.sumitrack.android.data.repositories
 import com.sumitrack.android.data.local.entities.CreditBalanceEntity
 import com.sumitrack.android.data.local.entities.InstallmentEntity
 import com.sumitrack.android.data.local.entities.SaleEntity
+import com.sumitrack.android.domain.models.AgendaEntry
 import com.sumitrack.android.domain.models.OrderDraftItem
 import com.sumitrack.android.domain.models.OrderSummary
 import com.sumitrack.android.domain.models.PaymentMethodType
@@ -20,6 +21,7 @@ import com.sumitrack.android.ui.screens.products.FakeTransactionRunner
 import java.math.BigDecimal
 import java.time.Instant
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -708,5 +710,27 @@ class SaleRepositoryTest {
         )
 
         assertEquals(BigDecimal("100.00"), fakeCreditBalanceDao.getForClient("client-1", "tenant-1").first().amount)
+    }
+
+    @Test
+    fun `getAgendaForTenant mapea solo las parcialidades pending del tenant con folio y cliente`() = runTest {
+        val due = Instant.parse("2026-10-01T18:00:00Z")
+        val now = Instant.parse("2026-09-01T00:00:00Z")
+        fun installment(id: String, status: String, tenant: String) = InstallmentEntity(
+            id = id, fkTenant = tenant, fkSale = "s1", amount = BigDecimal("100.00"), dueDate = due,
+            status = status, createdAt = now, updatedAt = now,
+        )
+        fakeInstallmentDao.upsertAll(
+            listOf(
+                installment("i1", "pending", "t1"),
+                installment("i2", "paid", "t1"),
+                installment("i3", "pending", "t2"),
+            ),
+        )
+        fakeInstallmentDao.setSaleContext("s1", "A1", "Juan Pérez")
+
+        val entries = repository.getAgendaForTenant("t1").first()
+
+        assertEquals(listOf(AgendaEntry("i1", "s1", "A1", "Juan Pérez", BigDecimal("100.00"), due)), entries)
     }
 }

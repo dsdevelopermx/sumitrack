@@ -382,7 +382,7 @@ private fun PaymentHistoryRow(payment: Payment) {
     }
 }
 
-private fun installmentStatusLabelAndColor(status: InstallmentUiStatus): Pair<String, Color> = when (status) {
+internal fun installmentStatusLabelAndColor(status: InstallmentUiStatus): Pair<String, Color> = when (status) {
     InstallmentUiStatus.PAID -> "Pagada" to StatusPaid
     InstallmentUiStatus.PENDING -> "Pendiente" to StatusPending
     InstallmentUiStatus.OVERDUE -> "Vencida" to StatusOverdue

@@ -2,6 +2,7 @@ package com.sumitrack.android.data.repositories
 
 import com.sumitrack.android.data.local.SearchNormalizer
 import com.sumitrack.android.data.local.TransactionRunner
+import com.sumitrack.android.data.local.dao.AgendaRow
 import com.sumitrack.android.data.local.dao.CreditBalanceDao
 import com.sumitrack.android.data.local.dao.InstallmentDao
 import com.sumitrack.android.data.local.dao.OrderSummaryRow
@@ -13,6 +14,7 @@ import com.sumitrack.android.data.local.entities.InstallmentEntity
 import com.sumitrack.android.data.local.entities.PaymentEntity
 import com.sumitrack.android.data.local.entities.SaleEntity
 import com.sumitrack.android.data.local.entities.SaleItemEntity
+import com.sumitrack.android.domain.models.AgendaEntry
 import com.sumitrack.android.domain.models.Installment
 import com.sumitrack.android.domain.models.InstallmentStatus
 import com.sumitrack.android.domain.models.OrderDraftItem
@@ -62,6 +64,10 @@ class SaleRepository @Inject constructor(
             statusFilter = statusFilter?.name?.lowercase(Locale.ROOT),
             normalizedQuery = SearchNormalizer.toLikePattern(searchQuery.trim()),
         ).map { rows -> rows.map { it.toDomain() } }
+
+    // Historia 5.3: cobros programados (parcialidades pendientes) para la Agenda de Cobros (S-10).
+    fun getAgendaForTenant(tenantId: String): Flow<List<AgendaEntry>> =
+        installmentDao.observeAgendaForTenant(tenantId).map { rows -> rows.map { it.toDomain() } }
 
     // Estatus "paid" para Pago inmediato: la UI (PaymentViewModel) solo permite confirmar cuando
     // "Restante por asignar" = $0.00, así que por construcción el total ya está cubierto.
@@ -336,6 +342,15 @@ class SaleRepository @Inject constructor(
         createdAt = createdAt,
         updatedAt = updatedAt,
         syncStatus = SyncStatus.fromString(syncStatus),
+    )
+
+    private fun AgendaRow.toDomain() = AgendaEntry(
+        installmentId = installmentId,
+        saleId = saleId,
+        folio = folio,
+        clientName = clientName,
+        amount = amount,
+        dueDate = dueDate,
     )
 
     private fun OrderSummaryRow.toDomain() = OrderSummary(

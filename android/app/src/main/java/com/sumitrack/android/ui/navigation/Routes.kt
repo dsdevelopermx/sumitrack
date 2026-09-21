@@ -45,4 +45,6 @@ sealed class Routes(val route: String) {
     }
 
     object ConflictLog : Routes("conflict_log")
+
+    object Agenda : Routes("agenda")
 }

@@ -1,5 +1,6 @@
 package com.sumitrack.android.ui.screens.orders
 
+import com.sumitrack.android.data.local.dao.AgendaRow
 import com.sumitrack.android.data.local.dao.InstallmentDao
 import com.sumitrack.android.data.local.entities.InstallmentEntity
 import kotlinx.coroutines.flow.Flow
@@ -35,6 +36,25 @@ class FakeInstallmentDao : InstallmentDao {
     }
 
     override suspend fun getById(id: String): InstallmentEntity? = installments[id]
+
+    // Contexto (folio + cliente) de cada venta, para simular el join de observeAgendaForTenant — mismo
+    // criterio que FakeSaleDao.clientNames. No replica el filtro por estado de la venta ni el SQL.
+    private val saleContext = mutableMapOf<String, Pair<String, String>>()
+
+    fun setSaleContext(saleId: String, folio: String, clientName: String) {
+        saleContext[saleId] = folio to clientName
+    }
+
+    override fun observeAgendaForTenant(tenantId: String): Flow<List<AgendaRow>> =
+        installmentsFlow.map { map ->
+            map.values
+                .filter { it.fkTenant == tenantId && it.status == "pending" }
+                .sortedWith(compareBy({ it.dueDate }, { it.id }))
+                .map { i ->
+                    val (folio, client) = saleContext[i.fkSale] ?: ("(sin folio)" to "(cliente eliminado)")
+                    AgendaRow(i.id, i.fkSale, folio, client, i.amount, i.dueDate)
+                }
+        }
 
     override fun observeOpenForTenant(tenantId: String): Flow<List<InstallmentEntity>> =
         installmentsFlow.map { map -> map.values.filter { it.fkTenant == tenantId && it.status == "pending" } }
