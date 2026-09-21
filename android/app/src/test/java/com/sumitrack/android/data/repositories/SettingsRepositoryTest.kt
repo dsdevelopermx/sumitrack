@@ -3,6 +3,7 @@ package com.sumitrack.android.data.repositories
 import com.sumitrack.android.data.remote.api.SettingsApiService
 import com.sumitrack.android.data.remote.dto.SettingDto
 import com.sumitrack.android.ui.screens.orders.FakeSettingsDao
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -72,6 +73,31 @@ class SettingsRepositoryTest {
 
         assertTrue("negocio_nombre" !in values)
         assertEquals(1, values.size)
+    }
+
+    @Test
+    fun `observeDiasAnticipacion devuelve 3 por defecto si la key no existe`() = runTest {
+        assertEquals(3, repository.observeDiasAnticipacion().first())
+    }
+
+    @Test
+    fun `observeDiasAnticipacion devuelve el valor guardado`() = runTest {
+        repository.updateSetting("dias_anticipacion_recordatorio", "7")
+        assertEquals(7, repository.observeDiasAnticipacion().first())
+    }
+
+    @Test
+    fun `observeDiasAnticipacion acota valores fuera de rango a 1-30`() = runTest {
+        repository.updateSetting("dias_anticipacion_recordatorio", "99")
+        assertEquals(30, repository.observeDiasAnticipacion().first())
+        repository.updateSetting("dias_anticipacion_recordatorio", "0")
+        assertEquals(1, repository.observeDiasAnticipacion().first())
+    }
+
+    @Test
+    fun `observeDiasAnticipacion devuelve 3 si el valor no es numerico`() = runTest {
+        repository.updateSetting("dias_anticipacion_recordatorio", "abc")
+        assertEquals(3, repository.observeDiasAnticipacion().first())
     }
 
     @Test

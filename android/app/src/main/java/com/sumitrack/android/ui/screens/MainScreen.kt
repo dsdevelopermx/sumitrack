@@ -1,5 +1,11 @@
 package com.sumitrack.android.ui.screens
 
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -25,6 +31,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -47,6 +55,24 @@ fun MainScreen(viewModel: SyncStatusViewModel = hiltViewModel()) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+
+    // Historia 5.2 (AC-6): en Android 13+ los recordatorios de cobro necesitan POST_NOTIFICATIONS.
+    // Se pide UNA sola vez por instalación — el flag va en SharedPreferences (no en estado de
+    // instancia) para no repetir el prompt en cada arranque en frío. Sin diálogo propio ni reintento:
+    // si se niega, se puede activar desde los ajustes del sistema; el worker consulta
+    // areNotificationsEnabled() cada vez, así que el resultado del launcher se ignora.
+    val context = LocalContext.current
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+    LaunchedEffect(Unit) {
+        val prefs = context.getSharedPreferences("sumitrack_prefs", Context.MODE_PRIVATE)
+        if (!prefs.getBoolean("notification_permission_asked", false) &&
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            prefs.edit().putBoolean("notification_permission_asked", true).apply()
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
 
     val tabs = remember {
         listOf(

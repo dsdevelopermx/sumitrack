@@ -1,4 +1,11 @@
 
+## Deferred from: code review de 5-2-notificaciones-push-locales-para-recordatorios-de-cobro (2026-09-21)
+
+- **Un recordatorio disparado con notificaciones apagadas/permiso denegado no se recupera al activarlas después** — el trabajo queda `SUCCEEDED` y `ReminderPlanner` solo planea disparos futuros; quien concede el permiso tarde pierde los recordatorios cuya hora ya pasó. Es el "se omiten silenciosamente" de AC-6; recuperarlos exigiría persistir cuáles no se mostraron (columna o DataStore). [ReminderWorker.kt]
+- **La notificación usa `android.R.drawable.ic_dialog_info`** — el proyecto no tiene ningún recurso `drawable`/`mipmap` (solo `values` y `xml`). Falta un ícono monocromo propio para la barra de estado. [ReminderWorker.kt]
+- **`WorkManagerReminderScheduler` y `ReminderWorker` sin tests directos** — no hay `work-testing` en el proyecto y agregarlo requiere aprobación; la lógica vive en `ReminderPlanner`/`ReminderContentBuilder`/`ReminderReconciler` (cubiertos). El disparo real, el prompt de permiso en Android 13+ y el tap en la notificación siguen sin verificarse en dispositivo (sin `adb`, gap heredado desde 2.1). [ReminderScheduler.kt, ReminderWorker.kt]
+- **Un cambio de zona horaria con el proceso vivo no re-planifica por sí solo** — la zona ya se lee en cada re-plan, pero nada dispara un re-plan por el cambio de zona; se corrige en la próxima escritura a `installments`/Settings o al reiniciar la app. [ReminderReconciler.kt]
+
 ## Deferred from: code review de 5-1-pantalla-de-configuracion-del-tenant (2026-09-13)
 
 - **Cerrar sesión mientras un guardado de settings está en curso puede dejar filas residuales tras `clearLocalSettings()`** — race infrecuente (requiere tocar "Guardar" y confirmar "Cerrar sesión" antes de que la corrutina de guardado termine), misma clase de riesgo ya tolerada en el proyecto (ver conflicto-luego-escritura del backend arriba). [SettingsViewModel.kt]

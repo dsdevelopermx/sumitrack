@@ -6,6 +6,8 @@ import com.sumitrack.android.sync.AndroidConnectivityObserver
 import com.sumitrack.android.sync.ConnectivityObserver
 import com.sumitrack.android.sync.PullSyncTrigger
 import com.sumitrack.android.sync.PushSyncTrigger
+import com.sumitrack.android.sync.reminders.ReminderScheduler
+import com.sumitrack.android.sync.reminders.WorkManagerReminderScheduler
 import com.sumitrack.android.sync.SyncWorkObserver
 import com.sumitrack.android.sync.TriggerPullSyncUseCase
 import com.sumitrack.android.sync.TriggerPushSyncUseCase
@@ -45,4 +47,8 @@ object SyncModule {
     @Provides
     @Singleton
     fun providePullSyncTrigger(useCase: TriggerPullSyncUseCase): PullSyncTrigger = useCase
+
+    @Provides
+    @Singleton
+    fun provideReminderScheduler(impl: WorkManagerReminderScheduler): ReminderScheduler = impl
 }

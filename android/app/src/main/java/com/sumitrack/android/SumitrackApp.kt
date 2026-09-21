@@ -10,15 +10,21 @@ import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkRequest
+import com.sumitrack.android.sync.reminders.ReminderReconciler
+import com.sumitrack.android.sync.reminders.ensurePaymentReminderChannel
 import com.sumitrack.android.sync.workers.PushWorker
 import dagger.hilt.android.HiltAndroidApp
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 
 @HiltAndroidApp
 class SumitrackApp : Application(), Configuration.Provider {
 
     @Inject lateinit var workerFactory: HiltWorkerFactory
+    @Inject lateinit var reminderReconciler: ReminderReconciler
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
@@ -36,5 +42,11 @@ class SumitrackApp : Application(), Configuration.Provider {
         // a instalaciones ya existentes en vez de quedar congelados con la primera versión.
         WorkManager.getInstance(this)
             .enqueueUniquePeriodicWork("push-sync", ExistingPeriodicWorkPolicy.UPDATE, request)
+
+        // Historia 5.2: recordatorios de cobro. El scope vive lo que el proceso — el reconciliador
+        // debe correr mientras haya proceso; al reiniciar la app se reconcilia de nuevo (WorkManager ya
+        // persiste el trabajo encolado tras reiniciar el dispositivo).
+        ensurePaymentReminderChannel(this)
+        reminderReconciler.start(CoroutineScope(SupervisorJob() + Dispatchers.Default))
     }
 }

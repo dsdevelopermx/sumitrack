@@ -6,7 +6,10 @@ import com.sumitrack.android.data.remote.api.SettingsApiService
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 
 @Singleton
 class SettingsRepository @Inject constructor(
@@ -40,6 +43,13 @@ class SettingsRepository @Inject constructor(
         val now = Instant.now()
         settingsDao.upsertAll(values.map { (key, value) -> SettingsEntity(key = key, value = value, createdAt = now, syncStatus = "pending") })
     }
+
+    // Historia 5.2: el reconciliador de recordatorios observa este valor para reprogramar solo cuando
+    // el proveedor lo cambia en S-14. Default 3 = el valor sembrado en backend.
+    fun observeDiasAnticipacion(): Flow<Int> =
+        settingsDao.getAll()
+            .map { list -> list.find { it.key == "dias_anticipacion_recordatorio" }?.value?.toIntOrNull()?.coerceIn(1, 30) ?: 3 }
+            .distinctUntilChanged()
 
     suspend fun getAllValues(): Map<String, String> =
         settingsDao.getAll().first().associate { it.key to it.value.orEmpty() }
