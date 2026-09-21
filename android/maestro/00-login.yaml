@@ -1,0 +1,39 @@
+# Flujo 00 — Login (Historia 1.4). Parte de una app SIN sesión (clearState) y valida que el login
+# contra la API real deja al proveedor en la pantalla principal.
+# Requiere: API arriba en http://localhost:5600 y `adb reverse tcp:5600 tcp:5600` (ver README.md).
+appId: com.sumitrack.android
+---
+- launchApp:
+    clearState: true
+    stopApp: true
+- extendedWaitUntil:
+    visible: "Inicia sesión para continuar"
+    timeout: 15000
+
+# Credenciales incorrectas → mensaje sin códigos de error (AC de 1.4)
+- tapOn: "Usuario"
+- inputText: "admin"
+- tapOn: "Contraseña"
+- inputText: "incorrecta"
+- hideKeyboard
+- tapOn: "Entrar"
+- assertVisible: "Usuario o contraseña incorrectos. Inténtalo de nuevo."
+
+# Credenciales válidas → pantalla principal (pestañas visibles). Se relanza la app limpia en vez de
+# borrar el campo: eraseText es poco fiable con el cursor a mitad de texto.
+- launchApp:
+    clearState: true
+    stopApp: true
+- extendedWaitUntil:
+    visible: "Inicia sesión para continuar"
+    timeout: 15000
+- tapOn: "Usuario"
+- inputText: "admin"
+- tapOn: "Contraseña"
+- inputText: "Admin123!"
+- hideKeyboard
+- tapOn: "Entrar"
+- extendedWaitUntil:
+    visible: "Config"
+    timeout: 15000
+- assertVisible: "Clientes"

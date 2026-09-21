@@ -1,0 +1,26 @@
+# Flujo 01 — Alta de cliente (Historia 2.2). Nombre único por corrida para no chocar con datos previos
+# del servidor. Reutiliza el login (00) para partir siempre de una sesión limpia.
+appId: com.sumitrack.android
+---
+- runFlow: 00-login.yaml
+- evalScript: ${output.clienteNombre = 'Cliente Maestro ' + new Date().getTime()}
+
+- tapOn: "Clientes"
+- assertVisible: "Buscar clientes..."
+- tapOn: "Agregar cliente"
+- assertVisible: "Nuevo cliente"
+
+# "Guardar" no procede con los obligatorios vacíos: se sigue en el formulario (AC 2.2)
+- tapOn: "Guardar"
+- assertVisible: "Nuevo cliente"
+
+- tapOn: "Nombre o razón social"
+- inputText: ${output.clienteNombre}
+- tapOn: "Teléfono"
+- inputText: "5512345678"
+- hideKeyboard
+- tapOn: "Guardar"
+
+# El cliente aparece de inmediato en la lista (AC 2.2)
+- assertVisible: "Clientes"
+- assertVisible: ${output.clienteNombre}
