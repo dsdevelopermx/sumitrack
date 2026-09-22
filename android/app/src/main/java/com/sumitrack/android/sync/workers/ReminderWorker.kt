@@ -10,6 +10,7 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.sumitrack.android.MainActivity
+import com.sumitrack.android.R
 import com.sumitrack.android.data.local.dao.ClientDao
 import com.sumitrack.android.data.local.dao.InstallmentDao
 import com.sumitrack.android.data.local.dao.SaleDao
@@ -56,7 +57,7 @@ class ReminderWorker @AssistedInject constructor(
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
             val notification = NotificationCompat.Builder(applicationContext, CHANNEL_PAYMENT_REMINDERS)
-                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle(content.title)
                 .setContentText(content.text)
                 .setAutoCancel(true)

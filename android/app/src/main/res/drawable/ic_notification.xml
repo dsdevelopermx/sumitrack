@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ícono de la barra de estado para recordatorios de cobro (ReminderWorker). Requisito de Android:
+     silueta simple de un solo color plano (el sistema la pinta de blanco/negro según el tema); nada
+     de degradados ni múltiples colores, o el sistema la recorta a un cuadrado gris.
+     Mismo motivo que el ícono de lanzador (ticket con check), reducido a un trazo. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="#FFFFFF">
+    <path
+        android:pathData="M6,3 H16 A2,2 0 0 1 18,5 V20.5 L16.3,19.3 L14.7,20.5 L13,19.3 L11.3,20.5 L9.7,19.3 L8,20.5 L6.3,19.3 L4.7,20.5 V5 A2,2 0 0 1 6,3 Z"
+        android:fillColor="#00000000"
+        android:strokeColor="#FF000000"
+        android:strokeWidth="1.6"
+        android:strokeLineJoin="round" />
+    <path android:pathData="M8,8 H14" android:strokeColor="#FF000000" android:strokeWidth="1.4" android:strokeLineCap="round" />
+    <path android:pathData="M8,11.5 H14" android:strokeColor="#FF000000" android:strokeWidth="1.4" android:strokeLineCap="round" />
+    <path android:pathData="M8.5,15.3 L10.3,17 L14,13" android:fillColor="#00000000" android:strokeColor="#FF000000" android:strokeWidth="1.6" android:strokeLineCap="round" android:strokeLineJoin="round" />
+</vector>

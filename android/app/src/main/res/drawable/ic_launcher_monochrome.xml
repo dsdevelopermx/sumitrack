@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Variante monocroma del ícono adaptativo (Android 13+, ícono temático): mismo dibujo que el
+     foreground pero en un solo color, que el sistema tintará (fondo dinámico del usuario). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:pathData="M38,28 H70 A4,4 0 0 1 74,32 V78.5 L69,75 L64,78.5 L59,75 L54,78.5 L49,75 L44,78.5 L39,75 L34,78.5 V32 A4,4 0 0 1 38,28 Z"
+        android:fillColor="#FFFFFF" />
+    <path android:pathData="M42,40 H66" android:strokeColor="#FFFFFF" android:strokeWidth="3.4" android:strokeLineCap="round" />
+    <path android:pathData="M42,49 H66" android:strokeColor="#FFFFFF" android:strokeWidth="3.4" android:strokeLineCap="round" />
+    <path android:pathData="M42,58 H56" android:strokeColor="#FFFFFF" android:strokeWidth="3.4" android:strokeLineCap="round" />
+    <path android:pathData="M54,58 m-15,0 a15,15 0 1,0 30,0 a15,15 0 1,0 -30,0" android:fillColor="#00000000" android:strokeColor="#FFFFFF" android:strokeWidth="3" />
+    <path android:pathData="M46.5,58 L51.5,63 L61.5,52.5" android:strokeColor="#FFFFFF" android:strokeWidth="3.6" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000" />
+</vector>
