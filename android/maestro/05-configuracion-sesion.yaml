@@ -1,0 +1,66 @@
+# Flujo 05 — Configuración y sesión (Historia 5.1): guarda datos fiscales, valida los parámetros de
+# venta (AC-6: un valor inválido muestra error al guardar y no se guarda) y cierra sesión con confirmación.
+# Los valores usados son cortos: al tocar el centro del campo el cursor queda al final y eraseText limpia.
+appId: com.sumitrack.android
+---
+- runFlow: subflows/login.yaml
+- tapOn: "Config"
+- assertVisible: "Configuración"
+
+# Datos fiscales
+- tapOn: "Nombre o razón social"
+- eraseText: 60
+- inputText: "Negocio Maestro"
+- hideKeyboard
+- tapOn:
+    text: "Guardar"
+    index: 0
+- assertVisible: "Datos fiscales guardados."
+
+# Parámetros de venta: un valor fuera de rango muestra el error y NO se guarda (AC-6)
+- scrollUntilVisible:
+    element: "Máximo de parcialidades"
+    timeout: 15000
+- tapOn: "Máximo de parcialidades"
+- eraseText: 10
+- inputText: "99"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      text: "Guardar"
+      below: "Serie de folio"
+    timeout: 15000
+- tapOn:
+    text: "Guardar"
+    below: "Serie de folio"
+- assertVisible: "Debe ser un número entre 1 y 15"
+- assertNotVisible: "Parámetros de venta guardados."
+
+# Con un valor válido se guarda
+- tapOn: "Máximo de parcialidades"
+- eraseText: 10
+- inputText: "12"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      text: "Guardar"
+      below: "Serie de folio"
+    timeout: 15000
+- tapOn:
+    text: "Guardar"
+    below: "Serie de folio"
+- assertVisible: "Parámetros de venta guardados."
+
+# Cerrar sesión: cancelar mantiene la sesión; confirmar regresa al login
+- scrollUntilVisible:
+    element: "Cerrar sesión"
+    timeout: 15000
+- tapOn: "Cerrar sesión"
+- assertVisible: "¿Cerrar sesión?"
+- tapOn: "Cancelar"
+- assertNotVisible: "¿Cerrar sesión?"
+- tapOn: "Cerrar sesión"
+- tapOn: "Sí, salir"
+- extendedWaitUntil:
+    visible: "Inicia sesión para continuar"
+    timeout: 15000

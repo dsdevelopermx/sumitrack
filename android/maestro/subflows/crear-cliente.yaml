@@ -1,0 +1,12 @@
+# Subflujo: alta de cliente. Entrada: env CLIENTE (nombre). Termina en la lista de Clientes.
+appId: com.sumitrack.android
+---
+- tapOn: "Clientes"
+- tapOn: "Agregar cliente"
+- tapOn: "Nombre o razón social"
+- inputText: ${CLIENTE}
+- tapOn: "Teléfono"
+- inputText: "5512345678"
+- hideKeyboard
+- tapOn: "Guardar"
+- assertVisible: ${CLIENTE}

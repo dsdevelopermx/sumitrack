@@ -37,6 +37,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -113,7 +115,11 @@ fun OrderListScreen(
                 icon = { Icon(Icons.Filled.Add, contentDescription = null) },
                 onClick = onNewOrderClick,
                 shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.focusRequester(fabFocusRequester),
+                // El texto del FAB no llegaba al árbol de accesibilidad (nodo Button sin nombre; lo detectó
+                // Maestro): se declara explícito para TalkBack y para los flujos e2e.
+                modifier = Modifier
+                    .focusRequester(fabFocusRequester)
+                    .semantics { contentDescription = "Nueva Orden" },
             )
         },
     ) { innerPadding ->

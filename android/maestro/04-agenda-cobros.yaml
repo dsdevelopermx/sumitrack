@@ -1,0 +1,42 @@
+# Flujo 04 — Agenda de cobros (Historia 5.3): una orden a 3 parcialidades mensuales aparece en el
+# calendario del mes de su primer vencimiento, con descripción de TalkBack por día, y desde la lista
+# del día se navega al detalle de la orden.
+appId: com.sumitrack.android
+---
+- runFlow: subflows/login.yaml
+- evalScript: ${output.cliente = 'Cliente Maestro ' + new Date().getTime()}
+- evalScript: ${output.producto = 'Producto Maestro ' + new Date().getTime()}
+- runFlow:
+    file: subflows/crear-cliente.yaml
+    env:
+      CLIENTE: ${output.cliente}
+- runFlow:
+    file: subflows/crear-producto.yaml
+    env:
+      PRODUCTO: ${output.producto}
+      PRECIO: "300"
+- runFlow:
+    file: subflows/crear-orden-parcialidades.yaml
+    env:
+      CLIENTE: ${output.cliente}
+      PRODUCTO: ${output.producto}
+
+# Agenda desde S-02
+- tapOn: "Regresar"
+- tapOn: "Agenda de cobros"
+- assertVisible: "Agenda de cobros"
+
+# El primer vencimiento cae en el mes siguiente (parcialidades mensuales desde hoy)
+- tapOn: "Mes siguiente"
+# Cada día con cobros anuncia su conteo (AC-3): "…, N cobros pendientes"
+- tapOn: ".*cobros? pendientes?.*"
+- assertVisible: "Cobros del .*"
+- scrollUntilVisible:
+    element: ${output.cliente}
+    timeout: 20000
+- assertVisible: "Folio .*"
+
+# Desde la lista del día se llega al detalle de la orden (S-09)
+- tapOn: ${output.cliente}
+- assertVisible: "Condición de pago"
+- assertVisible: ${output.producto}

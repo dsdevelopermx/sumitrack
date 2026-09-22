@@ -1,0 +1,18 @@
+# Subflujo: login válido desde una app sin sesión (clearState). Lo reutilizan los flujos largos.
+appId: com.sumitrack.android
+---
+- launchApp:
+    clearState: true
+    stopApp: true
+- extendedWaitUntil:
+    visible: "Inicia sesión para continuar"
+    timeout: 15000
+- tapOn: "Usuario"
+- inputText: "admin"
+- tapOn: "Contraseña"
+- inputText: "Admin123!"
+- hideKeyboard
+- tapOn: "Entrar"
+- extendedWaitUntil:
+    visible: "Config"
+    timeout: 15000

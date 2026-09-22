@@ -1,0 +1,39 @@
+# Flujo 03 — Orden con parcialidades (Historias 3.x): cliente + producto + orden a 3 pagos mensuales;
+# valida ticket, detalle de la orden y que quede el cobro pendiente.
+appId: com.sumitrack.android
+---
+- runFlow: subflows/login.yaml
+- evalScript: ${output.cliente = 'Cliente Maestro ' + new Date().getTime()}
+- evalScript: ${output.producto = 'Producto Maestro ' + new Date().getTime()}
+- runFlow:
+    file: subflows/crear-cliente.yaml
+    env:
+      CLIENTE: ${output.cliente}
+- runFlow:
+    file: subflows/crear-producto.yaml
+    env:
+      PRODUCTO: ${output.producto}
+      PRECIO: "300"
+- runFlow:
+    file: subflows/crear-orden-parcialidades.yaml
+    env:
+      CLIENTE: ${output.cliente}
+      PRODUCTO: ${output.producto}
+
+# Detalle: 3 parcialidades de $100 pendientes; con parcialidades el cobro se registra tocando la fila
+- assertVisible: ${output.producto}
+- assertVisible: "Parcialidades"
+- assertVisible: "$100.00"
+- assertVisible: "Pendiente"
+- assertNotVisible: "Pagada"
+- assertVisible: "Cancelar Orden"
+
+# Registrar el cobro de la primera parcialidad (efectivo por defecto) la marca como pagada
+- tapOn:
+    text: "Pendiente"
+    index: 0
+- assertVisible: "Registrar cobro"
+- tapOn: "Confirmar"
+- extendedWaitUntil:
+    visible: "Pagada"
+    timeout: 10000

@@ -1,0 +1,25 @@
+# Flujo 02 — Alta de producto en el catálogo (Historia 2.4): valida obligatorios y que el producto aparezca.
+appId: com.sumitrack.android
+---
+- runFlow: subflows/login.yaml
+- evalScript: ${output.producto = 'Producto Maestro ' + new Date().getTime()}
+
+- tapOn: "Config"
+- tapOn: "Catálogo de productos"
+- tapOn: "Agregar producto"
+
+# Sin nombre ni precio "Guardar" no procede: se sigue en el formulario (AC 2.4)
+- tapOn: "Guardar"
+- assertVisible: "Nuevo producto"
+
+- tapOn: "Nombre del producto"
+- inputText: ${output.producto}
+- hideKeyboard
+# Solo con el nombre tampoco procede (falta el precio)
+- tapOn: "Guardar"
+- assertVisible: "Nuevo producto"
+- tapOn: "Precio unitario"
+- inputText: "100"
+- hideKeyboard
+- tapOn: "Guardar"
+- assertVisible: ${output.producto}

@@ -2,7 +2,7 @@
 # del servidor. Reutiliza el login (00) para partir siempre de una sesión limpia.
 appId: com.sumitrack.android
 ---
-- runFlow: 00-login.yaml
+- runFlow: subflows/login.yaml
 - evalScript: ${output.clienteNombre = 'Cliente Maestro ' + new Date().getTime()}
 
 - tapOn: "Clientes"
@@ -10,12 +10,16 @@ appId: com.sumitrack.android
 - tapOn: "Agregar cliente"
 - assertVisible: "Nuevo cliente"
 
-# "Guardar" no procede con los obligatorios vacíos: se sigue en el formulario (AC 2.2)
+# Con los obligatorios vacíos "Guardar" no procede: se sigue en el formulario (AC 2.2)
 - tapOn: "Guardar"
 - assertVisible: "Nuevo cliente"
 
 - tapOn: "Nombre o razón social"
 - inputText: ${output.clienteNombre}
+- hideKeyboard
+# Solo con el nombre tampoco procede (falta el teléfono)
+- tapOn: "Guardar"
+- assertVisible: "Nuevo cliente"
 - tapOn: "Teléfono"
 - inputText: "5512345678"
 - hideKeyboard

@@ -1,0 +1,14 @@
+# Subflujo: alta de producto desde Config → Catálogo. Entradas: env PRODUCTO (nombre), PRECIO.
+# Termina en el catálogo de productos.
+appId: com.sumitrack.android
+---
+- tapOn: "Config"
+- tapOn: "Catálogo de productos"
+- tapOn: "Agregar producto"
+- tapOn: "Nombre del producto"
+- inputText: ${PRODUCTO}
+- tapOn: "Precio unitario"
+- inputText: ${PRECIO}
+- hideKeyboard
+- tapOn: "Guardar"
+- assertVisible: ${PRODUCTO}

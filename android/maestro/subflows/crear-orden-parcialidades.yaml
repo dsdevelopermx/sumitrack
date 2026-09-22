@@ -1,0 +1,35 @@
+# Subflujo: orden de 1 producto sin variantes ($300) pagada en 3 parcialidades mensuales.
+# Entradas: env CLIENTE, PRODUCTO (ya existentes). Termina en el detalle de la orden.
+appId: com.sumitrack.android
+---
+- tapOn: "Órdenes"
+- tapOn: "Nueva Orden"
+- tapOn: "Buscar cliente"
+- inputText: ${CLIENTE}
+# El texto buscado aparece en el campo (índice 0) y en la tarjeta del resultado (índice 1)
+- tapOn:
+    text: ${CLIENTE}
+    index: 1
+- scrollUntilVisible:
+    element: ${PRODUCTO}
+    timeout: 20000
+- tapOn: ${PRODUCTO}
+- tapOn: "Revisar Orden"
+- tapOn: "Ir a Pagar"
+- assertVisible: "Configurar pago"
+- tapOn: "Parcialidades"
+- tapOn: "Número de parcialidades"
+- inputText: "3"
+- hideKeyboard
+- assertVisible: "Suma de parcialidades: $300.00"
+- tapOn: "Confirmar Pago"
+- extendedWaitUntil:
+    visible: "Compartir"
+    timeout: 15000
+# Cerrar el ticket lleva de vuelta a la lista de órdenes
+- back
+- extendedWaitUntil:
+    visible: ${CLIENTE}
+    timeout: 10000
+- tapOn: ${CLIENTE}
+- assertVisible: "Condición de pago"
