@@ -19,7 +19,7 @@ colors:
   status-cancelled: "#9E9E9E"
   sync-ok: "#00BCD4"
   sync-pending: "#FF7043"
-  outline: "#E8E8EE"
+  outline: "#7C7C92"
   scrim: "rgba(0,0,0,0.5)"
 
 typography:
@@ -73,7 +73,7 @@ La voz visual es la de una app que respeta el tiempo de Roberto: mínima fricci�
 | `colors.surface` | `#FFFFFF` | Cards, bottom sheets, dialogs |
 | `colors.on-surface` | `#1A1A2E` | Texto principal sobre superficie |
 | `colors.on-surface-variant` | `#6B6B80` | Texto secundario, placeholders, fechas |
-| `colors.outline` | `#E8E8EE` | Bordes de cards, separadores, dividers |
+| `colors.outline` | `#7C7C92` | Bordes de componentes interactivos: campos de texto, chips, botones outlined (contraste ≥3:1 sobre `surface` y `background`, WCAG 1.4.11). Los divisores usan el `outlineVariant` de Material 3 |
 
 ### Colores de estado
 

@@ -25,7 +25,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -51,9 +50,6 @@ fun SettingsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val focusManager = LocalFocusManager.current
-    // El token `outline` del diseño (#E8E8EE) es para bordes de cards y separadores; M3 lo usa también
-    // como borde de campo sin foco y contra el fondo casi no se ve. Aquí se usa on-surface-variant.
-    val fieldColors = OutlinedTextFieldDefaults.colors(unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant)
 
     // Mientras carga los 7 valores iniciales (SettingsViewModel.init), no se renderizan los
     // campos — evita que el tipeo del usuario sea sobrescrito por la carga asíncrona. Mismo patrón
@@ -89,7 +85,6 @@ fun SettingsScreen(
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
             keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
             enabled = !uiState.isSavingFiscal,
-            colors = fieldColors,
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
         )
         OutlinedTextField(
@@ -100,7 +95,6 @@ fun SettingsScreen(
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
             keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
             enabled = !uiState.isSavingFiscal,
-            colors = fieldColors,
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
         )
         OutlinedTextField(
@@ -111,7 +105,6 @@ fun SettingsScreen(
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
             keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
             enabled = !uiState.isSavingFiscal,
-            colors = fieldColors,
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
         )
         OutlinedTextField(
@@ -122,7 +115,6 @@ fun SettingsScreen(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
             enabled = !uiState.isSavingFiscal,
-            colors = fieldColors,
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
         )
         if (uiState.fiscalSaved) {
@@ -191,7 +183,6 @@ fun SettingsScreen(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
             keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
             enabled = !uiState.isSavingParams,
-            colors = fieldColors,
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
         )
         OutlinedTextField(
@@ -204,7 +195,6 @@ fun SettingsScreen(
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
             keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
             enabled = !uiState.isSavingParams,
-            colors = fieldColors,
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
         )
         OutlinedTextField(
@@ -217,7 +207,6 @@ fun SettingsScreen(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
             enabled = !uiState.isSavingParams,
-            colors = fieldColors,
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
         )
         if (uiState.paramsSaved) {

@@ -10,7 +10,9 @@ val Background       = Color(0xFFF0F0F5)
 val Surface          = Color(0xFFFFFFFF)
 val OnSurface        = Color(0xFF1A1A2E)
 val OnSurfaceVariant = Color(0xFF6B6B80)
-val Outline          = Color(0xFFE8E8EE)
+// Borde de componentes (campos de texto, chips, botones outlined): ≥3:1 sobre surface y background (WCAG 1.4.11).
+// El #E8E8EE original (contraste ~1.2:1) era invisible como borde de campo.
+val Outline          = Color(0xFF7C7C92)
 val Error            = Color(0xFFB00020)
 
 // Estado de órdenes
