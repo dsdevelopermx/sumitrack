@@ -20,6 +20,11 @@ Cada flujo cita la historia que verifica.
 
 `run.sh` verifica el dispositivo, hace `adb reverse tcp:5600 tcp:5600` y comprueba que la API responde.
 
+`./verify-sync.sh` corre `sync-orden.yaml` (cliente + producto + orden a 3 parcialidades + un cobro + pull-to-refresh) y
+comprueba en PostgreSQL que llegó todo al servidor: 1 cliente, 1 producto, 1 venta, 1 ítem, 3 parcialidades y 1 cobro.
+Los flujos `0*` NO sincronizan: el push periódico es de 15 min y ellos duran menos (y arrancan con `clearState`), así que
+sus datos solo viven en el teléfono; la sincronización se valida aparte con este script.
+
 `./reset-tenant.sh [slug]` borra los datos operativos del tenant de pruebas en PostgreSQL (clientes, productos, ventas,
 parcialidades, cobros; conserva usuarios y settings). Pide confirmación. El teléfono no necesita reinicio: los flujos
 arrancan con `clearState`.
@@ -42,6 +47,8 @@ corren solos (`run.sh` solo toma `0*.yaml`).
 
 - Cada flujo arranca con `clearState` (sesión limpia). Los nombres llevan una marca de tiempo (`${output.cliente}`,
   `${output.producto}`) para no chocar con datos de corridas anteriores que el servidor conserve.
+- Gestos de pull-to-refresh: esperar a que la lista esté visible y estable antes del `swipe` (sin esa espera el gesto
+  no disparó el push); el swipe es largo y lento (38%→80%, 900 ms).
 - Listas largas: usar `scrollUntilVisible` antes de tocar un elemento (el catálogo acumula productos de corridas previas).
 - Un texto que aparece en un campo de búsqueda Y en su tarjeta de resultado coincide dos veces: `index: 1` toca la tarjeta.
 - Un elemento sin texto en el árbol de accesibilidad (p. ej. el FAB "Nueva Orden" antes de declarar su semántica)

@@ -1,0 +1,47 @@
+# Flujo de sincronización (Historias 4.1/4.3): crea cliente, producto y una orden a 3 parcialidades con un
+# cobro, y dispara el push inmediato con pull-to-refresh en la lista de órdenes. No arranca con nombre propio:
+# recibe env CLIENTE y PRODUCTO desde ./verify-sync.sh, que consulta después la BD del servidor.
+# (No lo toma run.sh: el push periódico es de 15 min y los flujos 0* duran menos, así que sin este disparo
+# manual sus datos nunca llegan al servidor.)
+appId: com.sumitrack.android
+---
+- runFlow: subflows/login.yaml
+- runFlow:
+    file: subflows/crear-cliente.yaml
+    env:
+      CLIENTE: ${CLIENTE}
+- runFlow:
+    file: subflows/crear-producto.yaml
+    env:
+      PRODUCTO: ${PRODUCTO}
+      PRECIO: "300"
+- runFlow:
+    file: subflows/crear-orden-parcialidades.yaml
+    env:
+      CLIENTE: ${CLIENTE}
+      PRODUCTO: ${PRODUCTO}
+- tapOn:
+    text: "Pendiente"
+    index: 0
+- tapOn: "Confirmar"
+- extendedWaitUntil:
+    visible: "Pagada"
+    timeout: 10000
+- tapOn: "Regresar"
+# La lista debe estar ya en pantalla y estable antes del gesto
+- extendedWaitUntil:
+    visible: ${CLIENTE}
+    timeout: 10000
+- waitForAnimationToEnd:
+    timeout: 3000
+# Pull-to-refresh sobre la lista de órdenes → push-sync-now (empuja las 9 entidades)
+- swipe:
+    start: 50%, 38%
+    end: 50%, 80%
+    duration: 900
+- extendedWaitUntil:
+    visible: ${CLIENTE}
+    timeout: 10000
+# Margen para que termine el push (la app debe seguir abierta)
+- waitForAnimationToEnd:
+    timeout: 8000
