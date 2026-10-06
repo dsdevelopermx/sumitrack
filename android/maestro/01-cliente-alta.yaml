@@ -25,6 +25,10 @@ appId: com.sumitrack.android
 - hideKeyboard
 - tapOn: "Guardar"
 
-# El cliente aparece de inmediato en la lista (AC 2.2)
+# El cliente aparece de inmediato en la lista (AC 2.2). La lista está ordenada por nombre y acumula clientes de
+# corridas previas (y a fuente 2.0 las tarjetas miden ~400px): se busca por nombre en vez de desplazarla.
 - assertVisible: "Clientes"
+- tapOn: "Buscar clientes..."
+- inputText: ${output.clienteNombre}
+- hideKeyboard
 - assertVisible: ${output.clienteNombre}

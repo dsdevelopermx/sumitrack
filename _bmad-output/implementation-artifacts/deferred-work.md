@@ -1,8 +1,12 @@
 
+## Deferred from: verificación en dispositivo a escala de fuente 2.0 (2026-10-05)
+
+- **"Configurar pago": las etiquetas de los botones segmentados (Pago inmediato/Parcialidades y Semanal/Quincenal/Mensual) se parten a mitad de palabra a ≥1.5× de escala de fuente** — los 3 segmentos de periodicidad miden ~109dp y el seleccionado lleva check. No se arregla con un tope de escala (ni a 1.0 cabrían "Quincenal" + check); requiere cambiar el layout a escalas grandes (p. ej. opciones en columna). [PaymentScreen.kt: InstallmentsSection]
+
 ## Deferred from: code review de 5-3-agenda-y-calendario-de-cobros (2026-09-21)
 
 - **`.catch { emit(emptyList()) }` convierte un error de Room en el empty state "No hay cobros programados"** — sin reintento ni indicación de fallo. Mismo patrón que `OrderListViewModel`; el proyecto no tiene UI de error para listas. [AgendaViewModel.kt]
-- **A 200 % de escala de fuente, número del día + conteo + campana pueden solaparse en una celda de ~49dp** — no verificable sin dispositivo. [AgendaScreen.kt:DayCell]
+- ~~A 200 % de escala de fuente, número del día + conteo + campana pueden solaparse en una celda~~ — **confirmado y resuelto 2026-10-05**: la escala de fuente se limita a 1.15 dentro de la celda (`AgendaScreen.DayCell`); verificado en un Galaxy S20 FE (360dp) a 2.0.
 - **El `TopAppBar` anidado de S-02/S-10 podría duplicar el inset de la barra de estado** — `MainScreen` aplica `Modifier.padding(innerPadding)` sin `consumeWindowInsets` y `MainActivity` usa `enableEdgeToEdge()`; la afirmación "los insets ya los absorbe el Scaffold externo" (T11) no está verificada. No es regresión (`ClientFormScreen` ya hace lo mismo). Verificar en dispositivo. [OrderListScreen.kt, AgendaScreen.kt]
 - **El `JOIN sales` interno oculta parcialidades cuya venta no se ha sincronizado, y el `LEFT JOIN clients` rotula "(cliente eliminado)" a un cliente que existe pero aún no llegó** — mismo criterio y texto que `OrderSummaryRow`. [InstallmentDao.kt]
 - ~~Los montos no llevan separador de miles ("$1250.00")~~ — **resuelto 2026-10-05**: `domain/format/MoneyFormat.kt` (`formatMoney`, `Locale.US` fijo, `%,.2f` HALF_UP) reemplaza las 13 copias privadas (eran 13, no 3: pantallas, tarjetas, ticket y recordatorio). Tests en `MoneyFormatTest`. Sin verificar en dispositivo.

@@ -33,11 +33,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -46,6 +48,7 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -220,6 +223,8 @@ private fun WeekdayHeader() {
     }
 }
 
+private const val MAX_CELL_FONT_SCALE = 1.15f
+
 @Composable
 private fun DayCell(
     cell: AgendaGridCell?,
@@ -274,37 +279,45 @@ private fun DayCell(
             },
         contentAlignment = Alignment.Center,
     ) {
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .padding(2.dp)
-                .clip(shape)
-                .background(background)
-                .then(if (cell.isToday) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, shape) else Modifier),
-        )
-        Text(
-            text = cell.date.dayOfMonth.toString(),
-            style = MaterialTheme.typography.bodyMedium,
-            // Canal no dependiente del color para el día seleccionado: número en negritas.
-            fontWeight = if (isSelected) FontWeight.Bold else null,
-            color = contentColor,
-        )
-        if (hasEntries) {
-            // Canal secundario no dependiente del color: el número de cobros superpuesto.
+        // La celda mide ~47dp de ancho: a escala de fuente 2.0 el número del día y el conteo se encimaban. Dentro de
+        // la celda la escala se limita; no se pierde información (TalkBack lee la descripción completa y la lista del
+        // día, debajo, sí escala al 100 % del ajuste del usuario).
+        val density = LocalDensity.current
+        CompositionLocalProvider(
+            LocalDensity provides Density(density.density, fontScale = minOf(density.fontScale, MAX_CELL_FONT_SCALE)),
+        ) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .padding(2.dp)
+                    .clip(shape)
+                    .background(background)
+                    .then(if (cell.isToday) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, shape) else Modifier),
+            )
             Text(
-                text = cell.count.toString(),
-                style = MaterialTheme.typography.labelSmall,
+                text = cell.date.dayOfMonth.toString(),
+                style = MaterialTheme.typography.bodyMedium,
+                // Canal no dependiente del color para el día seleccionado: número en negritas.
+                fontWeight = if (isSelected) FontWeight.Bold else null,
                 color = contentColor,
-                modifier = Modifier.align(Alignment.TopEnd).padding(top = 4.dp, end = 6.dp),
             )
-        }
-        if (cell.hasAlert) {
-            Icon(
-                imageVector = Icons.Filled.Notifications,
-                contentDescription = null,
-                tint = StatusPending,
-                modifier = Modifier.align(Alignment.BottomEnd).padding(bottom = 4.dp, end = 4.dp).size(14.dp),
-            )
+            if (hasEntries) {
+                // Canal secundario no dependiente del color: el número de cobros superpuesto.
+                Text(
+                    text = cell.count.toString(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = contentColor,
+                    modifier = Modifier.align(Alignment.TopEnd).padding(top = 4.dp, end = 6.dp),
+                )
+            }
+            if (cell.hasAlert) {
+                Icon(
+                    imageVector = Icons.Filled.Notifications,
+                    contentDescription = null,
+                    tint = StatusPending,
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(bottom = 4.dp, end = 4.dp).size(14.dp),
+                )
+            }
         }
     }
 }

@@ -46,3 +46,21 @@ Se conectó un dispositivo; se levantó la API local en segundo plano (PostgreSQ
 - **Sin verificar aún:** TalkBack por celda, escala de fuente 200 % (requiere cambiar un ajuste del sistema del teléfono), el disparo a las 9:00 sin forzar.
 
 Suite en el Samsung tras los fixes: 00, 01, 02, 05 (corrida completa) y 03, 04 (tras el fix) en verde; 422 tests unitarios, 0 fallos. Observación menor: en este dispositivo el mes abreviado sale "sept" (ICU del fabricante) vs "sep" en el Pixel; cosmético.
+
+
+---
+
+## Adenda 2 — escala de fuente 2.0 (el máximo de accesibilidad) en el Samsung
+
+Con autorización del usuario se subió `font_scale` de **0.8 (su valor original)** a 2.0 en el teléfono de pruebas, se revisaron las pantallas y se **restauró a 0.8** al terminar (verificado con `settings get`). Hallazgos:
+
+**Corregidos**
+1. **Celda de la Agenda (deferred de 5.3, confirmado).** A 2.0 el número del día y el conteo se encimaban ("21" con "2"). La celda mide ~47dp, no cabe un 2×: se limita la escala **dentro de la celda** a 1.15 (`CompositionLocalProvider(LocalDensity …)`); la descripción de TalkBack no cambia y la lista del día de abajo sí escala al 100 %.
+2. **Monto partido en `OrderCard`** ("$300." / "00"): el monto, el badge y el ícono compartían una `Row` con `weight`. Ahora es un `FlowRow`: el monto no se parte (`softWrap = false`) y badge+ícono bajan de línea si no caben.
+3. **La orden recién creada no se veía al volver de Pago (bug de usabilidad, no solo de fuentes).** `LazyColumn` ancla por clave el primer elemento visible, así que una orden insertada al inicio quedaba **por encima del viewport**, oculta hasta hacer scroll (la orden sí estaba en la BD local; se comprobó leyendo la base con `run-as` + `sqlite3`). Ahora, si el usuario está al inicio de la lista, se lleva al elemento 0 cuando cambia la orden más reciente (`OrderListScreen`).
+
+**Pendiente (no corregido)**
+- **"Configurar pago": etiquetas de los botones segmentados partidas a mitad de palabra** a ≥1.5× ("Parcialidad/es", "Seman/al", "Quince/nal", "Mensu/al"). Los tres segmentos de periodicidad miden ~109dp y el seleccionado además lleva el ícono de check. Requiere un cambio de diseño (p. ej. columna vertical de opciones cuando la escala sea grande), no un parche de tamaño.
+- Texto del placeholder del buscador y nombres largos se parten en varias líneas (aceptable; el contenido sigue completo).
+
+**Flujos de Maestro endurecidos para escalas grandes** (también valen a 0.8): 01/03/04 buscan al cliente por nombre en el buscador en vez de desplazar la lista (ordenada por nombre y con clientes de corridas previas; a 2.0 un `scrollUntilVisible` largo pasaba de largo), y 03 desplaza hasta el monto de las parcialidades con `visibilityPercentage: 100`. Resultado a 2.0: **6/6**.

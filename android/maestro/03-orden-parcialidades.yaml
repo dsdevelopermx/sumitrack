@@ -23,10 +23,14 @@ appId: com.sumitrack.android
 # Detalle: 3 parcialidades de $100 pendientes; con parcialidades el cobro se registra tocando la fila
 - assertVisible: ${output.producto}
 - assertVisible: "Parcialidades"
+# El detalle es una pantalla con scroll: a fuente 2.0 las parcialidades quedan debajo del primer pantallazo
+- scrollUntilVisible:
+    element: "$100.00"
+    visibilityPercentage: 100
+    timeout: 20000
 - assertVisible: "$100.00"
 - assertVisible: "Pendiente"
 - assertNotVisible: "Pagada"
-- assertVisible: "Cancelar Orden"
 
 # Registrar el cobro de la primera parcialidad (efectivo por defecto) la marca como pagada
 - tapOn:
@@ -37,3 +41,7 @@ appId: com.sumitrack.android
 - extendedWaitUntil:
     visible: "Pagada"
     timeout: 10000
+- scrollUntilVisible:
+    element: "Cancelar Orden"
+    timeout: 20000
+- assertVisible: "Cancelar Orden"

@@ -11,4 +11,7 @@ appId: com.sumitrack.android
 - inputText: ${PRECIO}
 - hideKeyboard
 - tapOn: "Guardar"
+- scrollUntilVisible:
+    element: ${PRODUCTO}
+    timeout: 20000
 - assertVisible: ${PRODUCTO}

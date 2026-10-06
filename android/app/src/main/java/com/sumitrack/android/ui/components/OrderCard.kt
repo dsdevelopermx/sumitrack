@@ -2,6 +2,8 @@ package com.sumitrack.android.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -23,6 +25,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun OrderCard(
     order: OrderSummary,
@@ -59,19 +62,28 @@ fun OrderCard(
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(top = 4.dp),
             )
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            // FlowRow en vez de Row: a escala de fuente 2.0 el monto, el badge y el ícono no caben en una línea y el
+            // monto (con weight) se partía en "$300." / "00". Ahora el monto no se parte y el grupo badge+ícono baja
+            // de línea cuando no hay espacio.
+            FlowRow(
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                itemVerticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
             ) {
                 Text(
                     text = formatMoney(order.total),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.weight(1f),
+                    softWrap = false,
                 )
-                StatusBadge(order.status.toUiStatus())
-                SyncIcon(status = order.syncStatus, onConflictClick = onConflictClick)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    StatusBadge(order.status.toUiStatus())
+                    SyncIcon(status = order.syncStatus, onConflictClick = onConflictClick)
+                }
             }
         }
     }

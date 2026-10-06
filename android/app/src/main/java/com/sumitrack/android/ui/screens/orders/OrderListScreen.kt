@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarMonth
@@ -68,6 +69,16 @@ fun OrderListScreen(
     viewModel: OrderListViewModel = hiltViewModel(),
 ) {
     val orders by viewModel.orders.collectAsStateWithLifecycle()
+
+    // LazyColumn ancla por clave el primer elemento visible: una orden nueva insertada al inicio (p. ej. al volver
+    // de Pago) quedaba por encima del viewport, oculta hasta hacer scroll. Si el usuario está al inicio de la lista,
+    // se lleva al elemento 0 cuando cambia la orden más reciente. Índice <= 1 porque, con el ancla ya aplicada, el
+    // elemento que estaba arriba pasó a ser el 1; si el usuario se había desplazado más, no se le mueve la lista.
+    val listState = rememberLazyListState()
+    val newestOrderId = orders.firstOrNull()?.id
+    LaunchedEffect(newestOrderId) {
+        if (newestOrderId != null && listState.firstVisibleItemIndex <= 1) listState.animateScrollToItem(0)
+    }
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val statusFilter by viewModel.statusFilter.collectAsStateWithLifecycle()
 
@@ -194,6 +205,7 @@ fun OrderListScreen(
                     )
                 } else {
                     LazyColumn(
+                        state = listState,
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(bottom = 88.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),

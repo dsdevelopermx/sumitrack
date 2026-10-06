@@ -9,4 +9,9 @@ appId: com.sumitrack.android
 - inputText: "5512345678"
 - hideKeyboard
 - tapOn: "Guardar"
+# Se busca por nombre en vez de desplazar la lista: está ordenada por nombre, acumula clientes de corridas previas y a
+# fuente 2.0 las tarjetas miden ~400px, así que un scroll largo pasa de largo sin ver el elemento.
+- tapOn: "Buscar clientes..."
+- inputText: ${CLIENTE}
+- hideKeyboard
 - assertVisible: ${CLIENTE}
