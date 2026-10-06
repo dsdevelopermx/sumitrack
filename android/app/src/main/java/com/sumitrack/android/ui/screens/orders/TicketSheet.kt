@@ -18,6 +18,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -46,7 +47,11 @@ fun TicketSheet(
 
     val lines = buildTicketLines(ticketData)
 
-    ModalBottomSheet(onDismissRequest = onDismiss, shape = MaterialTheme.shapes.large) {
+    // skipPartiallyExpanded: la hoja es una superficie de acciones (imprimir/compartir). Con el estado
+    // parcial por defecto, en pantallas de pocos dp de alto (p. ej. un Galaxy S20 FE, 360dp de ancho en
+    // 1080px) abría a media altura y "Compartir" quedaba tapado hasta arrastrar la hoja.
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, shape = MaterialTheme.shapes.large) {
         Column(modifier = Modifier.padding(horizontal = 16.dp).padding(bottom = 24.dp)) {
             Text("Ticket — Folio ${ticketData.folio}", style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(12.dp))
