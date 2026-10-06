@@ -32,9 +32,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sumitrack.android.domain.format.formatMoney
 import com.sumitrack.android.domain.models.ClientSearchResult
-import java.math.BigDecimal
-import java.math.RoundingMode
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -138,7 +137,7 @@ private fun ClientSearchResultCard(
             ) {
                 Text(result.name, style = MaterialTheme.typography.bodyLarge)
                 Text(
-                    text = formatBalance(result.balance),
+                    text = formatMoney(result.balance),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary,
                 )
@@ -146,6 +145,3 @@ private fun ClientSearchResultCard(
         }
     }
 }
-
-private fun formatBalance(balance: BigDecimal): String =
-    "$${balance.setScale(2, RoundingMode.HALF_UP).toPlainString()}"

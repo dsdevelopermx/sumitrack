@@ -41,10 +41,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sumitrack.android.domain.format.formatMoney
 import com.sumitrack.android.domain.models.Product
 import com.sumitrack.android.ui.components.EmptyState
-import java.math.BigDecimal
-import java.math.RoundingMode
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -136,7 +135,7 @@ fun ItemListScreen(
                         .padding(16.dp),
                 ) {
                     Text(
-                        text = formatAmount(uiState.subtotal),
+                        text = formatMoney(uiState.subtotal),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.weight(1f),
@@ -207,7 +206,7 @@ private fun ProductRow(
                 Text(product.name, style = MaterialTheme.typography.bodyLarge)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = formatAmount(product.price),
+                        text = formatMoney(product.price),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.primary,
                     )
@@ -237,6 +236,3 @@ private fun ProductRow(
         }
     }
 }
-
-private fun formatAmount(amount: BigDecimal): String =
-    "$${amount.setScale(2, RoundingMode.HALF_UP).toPlainString()}"

@@ -29,9 +29,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sumitrack.android.domain.format.formatMoney
 import com.sumitrack.android.domain.models.OrderDraftItem
 import java.math.BigDecimal
-import java.math.RoundingMode
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -115,7 +115,7 @@ private fun OrderSummaryItemRow(item: OrderDraftItem) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        Text(formatAmount(item.subtotal), style = MaterialTheme.typography.bodyLarge)
+        Text(formatMoney(item.subtotal), style = MaterialTheme.typography.bodyLarge)
     }
 }
 
@@ -130,12 +130,9 @@ private fun SummaryLine(label: String, amount: BigDecimal, emphasize: Boolean = 
             style = if (emphasize) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyMedium,
         )
         Text(
-            text = formatAmount(amount),
+            text = formatMoney(amount),
             style = if (emphasize) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyMedium,
             color = if (emphasize) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
         )
     }
 }
-
-private fun formatAmount(amount: BigDecimal): String =
-    "$${amount.setScale(2, RoundingMode.HALF_UP).toPlainString()}"

@@ -1,4 +1,4 @@
-# Flujo 02 — Alta de producto en el catálogo (Historia 2.4): valida obligatorios y que el producto aparezca.
+# Flujo 02 — Alta de producto en el catálogo (Historia 2.4): valida obligatorios, que el producto aparezca y el formato de monto con separador de miles.
 appId: com.sumitrack.android
 ---
 - runFlow: subflows/login.yaml
@@ -19,7 +19,9 @@ appId: com.sumitrack.android
 - tapOn: "Guardar"
 - assertVisible: "Nuevo producto"
 - tapOn: "Precio unitario"
-- inputText: "100"
+- inputText: "1250"
 - hideKeyboard
 - tapOn: "Guardar"
 - assertVisible: ${output.producto}
+# Montos con separador de miles ("$1,250.00", voz de UX) — el "." y el "$" son metacaracteres de regex
+- assertVisible: ".*1,250.00.*"

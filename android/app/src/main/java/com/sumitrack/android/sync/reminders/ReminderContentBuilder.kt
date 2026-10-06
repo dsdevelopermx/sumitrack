@@ -2,7 +2,7 @@ package com.sumitrack.android.sync.reminders
 
 import com.sumitrack.android.data.local.entities.InstallmentEntity
 import com.sumitrack.android.data.local.entities.SaleEntity
-import java.math.RoundingMode
+import com.sumitrack.android.domain.format.formatMoney
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -28,7 +28,7 @@ object ReminderContentBuilder {
         if (installment == null || installment.status != "pending") return null
         if (sale?.status == "cancelled" || sale?.status == "paid") return null
 
-        val amount = "$${installment.amount.setScale(2, RoundingMode.HALF_UP).toPlainString()}"
+        val amount = formatMoney(installment.amount)
         val dueDate = dateFormatter.format(installment.dueDate.atZone(zone))
         return ReminderContent(
             title = clientName?.takeIf { it.isNotBlank() } ?: GENERIC_TITLE,

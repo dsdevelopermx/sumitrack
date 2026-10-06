@@ -5,10 +5,9 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
+import com.sumitrack.android.domain.format.formatMoney
 import com.sumitrack.android.domain.models.TicketData
 import com.sumitrack.android.domain.models.TicketPaymentCondition
-import java.math.BigDecimal
-import java.math.RoundingMode
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -56,24 +55,21 @@ fun buildTicketLines(ticket: TicketData): List<String> {
     lines += "--------------------------------"
     ticket.lineItems.forEach { item ->
         lines += "${item.description} x${item.quantity}"
-        lines += "  ${formatTicketAmount(item.unitPrice)} c/u = ${formatTicketAmount(item.subtotal)}"
+        lines += "  ${formatMoney(item.unitPrice)} c/u = ${formatMoney(item.subtotal)}"
     }
     lines += "--------------------------------"
-    lines += "Subtotal: ${formatTicketAmount(ticket.subtotal)}"
-    lines += "Impuestos: ${formatTicketAmount(ticket.tax)}"
-    lines += "Total: ${formatTicketAmount(ticket.total)}"
+    lines += "Subtotal: ${formatMoney(ticket.subtotal)}"
+    lines += "Impuestos: ${formatMoney(ticket.tax)}"
+    lines += "Total: ${formatMoney(ticket.total)}"
     when (val condition = ticket.paymentCondition) {
         is TicketPaymentCondition.SinglePayment -> lines += "Pago de contado"
         is TicketPaymentCondition.InstallmentPlan -> {
             lines += "Parcialidades:"
-            condition.installments.forEach { lines += "  ${formatTicketDate(it.dueDate)}: ${formatTicketAmount(it.amount)}" }
+            condition.installments.forEach { lines += "  ${formatTicketDate(it.dueDate)}: ${formatMoney(it.amount)}" }
         }
     }
     return lines
 }
-
-private fun formatTicketAmount(amount: BigDecimal): String =
-    "$${amount.setScale(2, RoundingMode.HALF_UP).toPlainString()}"
 
 private fun formatTicketDate(instant: Instant): String =
     DateTimeFormatter.ofPattern("dd/MM/yyyy").format(instant.atZone(ZoneId.systemDefault()))

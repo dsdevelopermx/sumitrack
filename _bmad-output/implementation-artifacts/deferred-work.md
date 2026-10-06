@@ -5,7 +5,7 @@
 - **A 200 % de escala de fuente, número del día + conteo + campana pueden solaparse en una celda de ~49dp** — no verificable sin dispositivo. [AgendaScreen.kt:DayCell]
 - **El `TopAppBar` anidado de S-02/S-10 podría duplicar el inset de la barra de estado** — `MainScreen` aplica `Modifier.padding(innerPadding)` sin `consumeWindowInsets` y `MainActivity` usa `enableEdgeToEdge()`; la afirmación "los insets ya los absorbe el Scaffold externo" (T11) no está verificada. No es regresión (`ClientFormScreen` ya hace lo mismo). Verificar en dispositivo. [OrderListScreen.kt, AgendaScreen.kt]
 - **El `JOIN sales` interno oculta parcialidades cuya venta no se ha sincronizado, y el `LEFT JOIN clients` rotula "(cliente eliminado)" a un cliente que existe pero aún no llegó** — mismo criterio y texto que `OrderSummaryRow`. [InstallmentDao.kt]
-- **Los montos no llevan separador de miles ("$1250.00")**, aunque la voz de UX pide "$1,250.00" — `formatAmount` ya está duplicada en 3 archivos privados (OrderDetailScreen, OrderCard, AgendaScreen); conviene un formateador compartido. [AgendaScreen.kt]
+- ~~Los montos no llevan separador de miles ("$1250.00")~~ — **resuelto 2026-10-05**: `domain/format/MoneyFormat.kt` (`formatMoney`, `Locale.US` fijo, `%,.2f` HALF_UP) reemplaza las 13 copias privadas (eran 13, no 3: pantallas, tarjetas, ticket y recordatorio). Tests en `MoneyFormatTest`. Sin verificar en dispositivo.
 
 ## Deferred from: code review de 5-2-notificaciones-push-locales-para-recordatorios-de-cobro (2026-09-21)
 

@@ -14,9 +14,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.sumitrack.android.domain.format.formatMoney
 import com.sumitrack.android.domain.models.Product
-import java.math.BigDecimal
-import java.math.RoundingMode
 
 @Composable
 fun ProductCard(
@@ -53,13 +52,10 @@ fun ProductCard(
                 }
             }
             Text(
-                text = formatPrice(product.price),
+                text = formatMoney(product.price),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
             )
         }
     }
 }
-
-private fun formatPrice(price: BigDecimal): String =
-    "$${price.setScale(2, RoundingMode.HALF_UP).toPlainString()}"

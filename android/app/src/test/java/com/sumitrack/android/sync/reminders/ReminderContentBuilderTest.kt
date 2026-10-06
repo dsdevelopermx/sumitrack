@@ -44,7 +44,7 @@ class ReminderContentBuilderTest {
 
         assertNotNull(content)
         assertEquals("Juan Pérez", content!!.title)
-        assertTrue(content.text.startsWith("$1250.00 · vence el "))
+        assertTrue(content.text.startsWith("$1,250.00 · vence el "))
         assertTrue(content.text.endsWith("2026"))
     }
 

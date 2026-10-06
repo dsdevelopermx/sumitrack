@@ -39,6 +39,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sumitrack.android.domain.format.formatMoney
 import com.sumitrack.android.domain.models.Sale
 import com.sumitrack.android.ui.components.SaleUiStatus
 import com.sumitrack.android.ui.components.StatusBadge
@@ -46,7 +47,6 @@ import com.sumitrack.android.ui.theme.PrimaryVariant
 import com.sumitrack.android.ui.theme.StatusOverdue
 import com.sumitrack.android.ui.theme.SyncOk
 import java.math.BigDecimal
-import java.math.RoundingMode
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -123,7 +123,7 @@ fun ClientProfileScreen(
                         .padding(horizontal = 16.dp, vertical = 16.dp),
                 ) {
                     Text(
-                        text = formatAmount(client.balance),
+                        text = formatMoney(client.balance),
                         style = MaterialTheme.typography.displayLarge,
                         color = MaterialTheme.colorScheme.primary,
                     )
@@ -203,7 +203,7 @@ private fun OpenSaleRow(sale: Sale, modifier: Modifier = Modifier) {
                 color = PrimaryVariant,
             )
             Text(
-                text = formatAmount(sale.total),
+                text = formatMoney(sale.total),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
             )
@@ -263,7 +263,7 @@ private fun FinancialAlertBanner(
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             ) {
                 Text(
-                    text = "Tiene ${formatAmount(amount)} vencido.",
+                    text = "Tiene ${formatMoney(amount)} vencido.",
                     color = StatusOverdue,
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(12.dp),
@@ -277,7 +277,7 @@ private fun FinancialAlertBanner(
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             ) {
                 Text(
-                    text = "Tiene ${formatAmount(amount)} a su favor. Puedes aplicarlo al pago.",
+                    text = "Tiene ${formatMoney(amount)} a su favor. Puedes aplicarlo al pago.",
                     color = SyncOk,
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(12.dp),
@@ -286,6 +286,3 @@ private fun FinancialAlertBanner(
         }
     }
 }
-
-private fun formatAmount(amount: BigDecimal): String =
-    "$${amount.setScale(2, RoundingMode.HALF_UP).toPlainString()}"

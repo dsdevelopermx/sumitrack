@@ -14,11 +14,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.sumitrack.android.domain.format.formatMoney
 import com.sumitrack.android.domain.models.OrderSummary
 import com.sumitrack.android.domain.models.SaleStatus
 import com.sumitrack.android.ui.theme.PrimaryVariant
-import java.math.BigDecimal
-import java.math.RoundingMode
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -66,7 +65,7 @@ fun OrderCard(
                 modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
             ) {
                 Text(
-                    text = formatTotal(order.total),
+                    text = formatMoney(order.total),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.weight(1f),
@@ -83,9 +82,6 @@ private fun SaleStatus.toUiStatus(): SaleUiStatus = when (this) {
     SaleStatus.PAID -> SaleUiStatus.PAID
     SaleStatus.CANCELLED -> SaleUiStatus.CANCELLED
 }
-
-private fun formatTotal(total: BigDecimal): String =
-    "$${total.setScale(2, RoundingMode.HALF_UP).toPlainString()}"
 
 private val dateFormatter = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.forLanguageTag("es-MX"))
 

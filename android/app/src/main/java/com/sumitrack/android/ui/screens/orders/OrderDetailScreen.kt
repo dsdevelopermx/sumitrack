@@ -50,6 +50,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sumitrack.android.domain.format.formatMoney
 import com.sumitrack.android.domain.models.Installment
 import com.sumitrack.android.domain.models.Payment
 import com.sumitrack.android.domain.models.PaymentMethodType
@@ -64,7 +65,6 @@ import com.sumitrack.android.ui.theme.StatusOverdue
 import com.sumitrack.android.ui.theme.StatusPaid
 import com.sumitrack.android.ui.theme.StatusPending
 import java.math.BigDecimal
-import java.math.RoundingMode
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -330,12 +330,12 @@ private fun OrderDetailItemRow(item: SaleItem) {
             val name = if (item.variantName != null) "${item.productName} (${item.variantName})" else item.productName
             Text(name, style = MaterialTheme.typography.bodyLarge)
             Text(
-                "x${item.quantity} · ${formatAmount(item.unitPrice)} c/u",
+                "x${item.quantity} · ${formatMoney(item.unitPrice)} c/u",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        Text(formatAmount(item.subtotal), style = MaterialTheme.typography.bodyLarge)
+        Text(formatMoney(item.subtotal), style = MaterialTheme.typography.bodyLarge)
     }
 }
 
@@ -347,7 +347,7 @@ private fun SummaryLine(label: String, amount: BigDecimal, emphasize: Boolean = 
             style = if (emphasize) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyMedium,
         )
         Text(
-            text = formatAmount(amount),
+            text = formatMoney(amount),
             style = if (emphasize) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyMedium,
             color = if (emphasize) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
         )
@@ -361,7 +361,7 @@ private fun InstallmentRow(installment: Installment, onClick: (() -> Unit)? = nu
     Row(verticalAlignment = Alignment.CenterVertically, modifier = rowModifier) {
         Column(modifier = Modifier.weight(1f)) {
             Text(formatDate(installment.dueDate), style = MaterialTheme.typography.bodyMedium)
-            Text(formatAmount(installment.amount), style = MaterialTheme.typography.bodyLarge)
+            Text(formatMoney(installment.amount), style = MaterialTheme.typography.bodyLarge)
         }
         Surface(color = color.copy(alpha = 0.12f), shape = MaterialTheme.shapes.small) {
             Text(
@@ -378,7 +378,7 @@ private fun InstallmentRow(installment: Installment, onClick: (() -> Unit)? = nu
 private fun PaymentHistoryRow(payment: Payment) {
     Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
         Text(formatDate(payment.paidAt), style = MaterialTheme.typography.bodyMedium)
-        Text(formatAmount(payment.amount), style = MaterialTheme.typography.bodyLarge)
+        Text(formatMoney(payment.amount), style = MaterialTheme.typography.bodyLarge)
     }
 }
 
@@ -400,9 +400,6 @@ private val dateFormatter = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.for
 private fun formatDate(instant: Instant): String =
     dateFormatter.format(instant.atZone(ZoneId.systemDefault()))
 
-private fun formatAmount(amount: BigDecimal): String =
-    "$${amount.setScale(2, RoundingMode.HALF_UP).toPlainString()}"
-
 // No reutiliza PaymentMethodRow (ui/components/) — ese componente incluye un campo de monto
 // editable y un botón de eliminar pensados para el "Constructor de Métodos de Pago" de S-07
 // (crear una venta). Aquí el monto nunca es editable (siempre el total de la venta o el monto fijo
@@ -422,7 +419,7 @@ private fun RegisterPaymentDialog(
         title = { Text("Registrar cobro") },
         text = {
             Column {
-                Text(formatAmount(amount), style = MaterialTheme.typography.titleLarge)
+                Text(formatMoney(amount), style = MaterialTheme.typography.titleLarge)
                 Column(modifier = Modifier.padding(top = 16.dp)) {
                     // Crédito a Favor se excluye aquí: "Registrar Cobro" (Historia 3.6) cobra
                     // contra una venta/parcialidad ya existente, no crea ni consume crédito — esa

@@ -14,8 +14,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.sumitrack.android.domain.format.formatMoney
 import com.sumitrack.android.domain.models.Client
-import java.math.RoundingMode
 
 @Composable
 fun ClientCard(
@@ -50,7 +50,7 @@ fun ClientCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    text = formatBalance(client),
+                    text = formatMoney(client.balance),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary,
                 )
@@ -59,6 +59,3 @@ fun ClientCard(
         }
     }
 }
-
-private fun formatBalance(client: Client): String =
-    "$${client.balance.setScale(2, RoundingMode.HALF_UP).toPlainString()}"

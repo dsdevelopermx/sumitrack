@@ -52,12 +52,12 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sumitrack.android.domain.format.formatMoney
 import com.sumitrack.android.domain.models.InstallmentPeriodicity
 import com.sumitrack.android.domain.models.PaymentMethodType
 import com.sumitrack.android.ui.components.PaymentMethodRow
 import com.sumitrack.android.ui.theme.SyncOk
 import java.math.BigDecimal
-import java.math.RoundingMode
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -247,7 +247,7 @@ private fun ImmediatePaymentSection(
                     modifier = Modifier.fillMaxWidth().padding(12.dp),
                 ) {
                     Text(
-                        text = "Tiene ${formatAmount(availableCredit)} a su favor. Puedes aplicarlo al pago.",
+                        text = "Tiene ${formatMoney(availableCredit)} a su favor. Puedes aplicarlo al pago.",
                         color = SyncOk,
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.weight(1f),
@@ -270,7 +270,7 @@ private fun ImmediatePaymentSection(
             Text("+ Agregar método")
         }
         Text(
-            text = "Restante por asignar: ${formatAmount(remaining)}",
+            text = "Restante por asignar: ${formatMoney(remaining)}",
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier
@@ -341,7 +341,7 @@ private fun InstallmentsSection(
         }
 
         Text(
-            text = "Suma de parcialidades: ${formatAmount(installmentsSum)}",
+            text = "Suma de parcialidades: ${formatMoney(installmentsSum)}",
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(top = 12.dp),
         )
@@ -406,6 +406,3 @@ private fun periodicityLabel(periodicity: InstallmentPeriodicity): String = when
     InstallmentPeriodicity.BIWEEKLY -> "Quincenal"
     InstallmentPeriodicity.MONTHLY -> "Mensual"
 }
-
-private fun formatAmount(amount: BigDecimal): String =
-    "$${amount.setScale(2, RoundingMode.HALF_UP).toPlainString()}"

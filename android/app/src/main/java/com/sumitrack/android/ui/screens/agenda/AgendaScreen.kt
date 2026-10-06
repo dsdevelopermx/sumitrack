@@ -51,13 +51,12 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sumitrack.android.domain.format.formatMoney
 import com.sumitrack.android.ui.components.EmptyState
 import com.sumitrack.android.ui.screens.orders.InstallmentUiStatus
 import com.sumitrack.android.ui.screens.orders.installmentStatusLabelAndColor
 import com.sumitrack.android.ui.theme.StatusOverdue
 import com.sumitrack.android.ui.theme.StatusPending
-import java.math.BigDecimal
-import java.math.RoundingMode
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
@@ -332,11 +331,9 @@ private fun EntryRow(item: AgendaEntryUi, onClick: () -> Unit) {
             )
         }
         Column(horizontalAlignment = Alignment.End) {
-            Text(text = formatAmount(item.entry.amount), style = MaterialTheme.typography.bodyLarge)
+            Text(text = formatMoney(item.entry.amount), style = MaterialTheme.typography.bodyLarge)
             // Color + texto (nunca solo color).
             Text(text = statusLabel, style = MaterialTheme.typography.labelMedium, color = statusColor)
         }
     }
 }
-
-private fun formatAmount(amount: BigDecimal): String = "$${amount.setScale(2, RoundingMode.HALF_UP).toPlainString()}"
